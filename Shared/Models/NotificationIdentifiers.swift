@@ -4,6 +4,7 @@ enum NotificationIdentifiers {
   static let daytimePrefix = "lucidcue.daytime."
   static let nighttime = "lucidcue.nighttime"
   static let wbtbPrefix = "lucidcue.wbtb."
+  static let wbtbTest = "lucidcue.wbtb.test"
   static let morningJournal = "lucidcue.morning-journal"
   static let snoozePrefix = "lucidcue.snooze."
   static let category = "REALITY_CHECK"

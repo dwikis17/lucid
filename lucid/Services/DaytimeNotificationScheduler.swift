@@ -12,6 +12,8 @@ protocol DaytimeNotificationScheduling {
   func scheduleSnooze(cueWord: String, after seconds: TimeInterval) async throws
   func reconcileWBTBNotifications(settings: CueSettings) async throws
   func reconcileWBTBNotifications(settings: CueSettings, alarmEnabled: Bool) async throws
+  func scheduleTestWBTBAlarm() async throws
+  func cancelTestWBTBAlarm()
   func reconcileMorningJournalReminder(settings: CueSettings) async throws
 }
 
@@ -20,6 +22,8 @@ extension DaytimeNotificationScheduling {
   func reconcileWBTBNotifications(settings: CueSettings, alarmEnabled: Bool) async throws {
     try await reconcileWBTBNotifications(settings: settings)
   }
+  func scheduleTestWBTBAlarm() async throws {}
+  func cancelTestWBTBAlarm() {}
   func reconcileMorningJournalReminder(settings: CueSettings) async throws {}
 }
 
@@ -176,6 +180,33 @@ struct DaytimeNotificationScheduler: DaytimeNotificationScheduling {
         )
       )
     }
+  }
+
+  func scheduleTestWBTBAlarm() async throws {
+    cancelTestWBTBAlarm()
+    if #available(iOS 26.0, *) {
+      try await WBTBAlarmService.scheduleTestAlarm()
+      return
+    }
+
+    let content = UNMutableNotificationContent()
+    content.title = "Wake Back to Bed"
+    content.body = "Recall a dream, set your intention, then return to sleep."
+    content.sound = .default
+    content.interruptionLevel = .timeSensitive
+    content.userInfo = ["type": "wbtb"]
+    try await center.add(
+      UNNotificationRequest(
+        identifier: NotificationIdentifiers.wbtbTest,
+        content: content,
+        trigger: UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false)
+      )
+    )
+  }
+
+  func cancelTestWBTBAlarm() {
+    center.removePendingNotificationRequests(withIdentifiers: [NotificationIdentifiers.wbtbTest])
+    WBTBAlarmService.cancelTestAlarm()
   }
 
   func reconcileMorningJournalReminder(settings: CueSettings) async throws {

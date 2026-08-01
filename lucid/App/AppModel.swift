@@ -12,6 +12,8 @@ final class AppModel {
   private(set) var authorizationStatus = UNAuthorizationStatus.notDetermined
   private(set) var nextDaytimeReminder: Date?
   private(set) var nextNightCue: Date?
+  private(set) var isTestWBTBAlarmScheduled = false
+  private(set) var testWBTBAlarmStatus: String?
   private(set) var statusMessage: String?
   var route: AppRoute?
   let appLock: AppLockManager
@@ -72,6 +74,38 @@ final class AppModel {
     } catch {
       statusMessage = error.localizedDescription
     }
+  }
+
+  func scheduleTestWBTBAlarm() async {
+    isTestWBTBAlarmScheduled = false
+    guard purchaseManager.isPro else {
+      setTestWBTBAlarmStatus("Lucid Pro is required to test the WBTB alarm.")
+      return
+    }
+    guard settings.hasAcknowledgedWBTBSafety else {
+      setTestWBTBAlarmStatus("Acknowledge the WBTB safety notice in Cue Schedule first.")
+      return
+    }
+    if #unavailable(iOS 26.0), !isNotificationAuthorized {
+      setTestWBTBAlarmStatus("Enable notifications in Settings to test the WBTB alarm.")
+      return
+    }
+
+    do {
+      try await scheduler.scheduleTestWBTBAlarm()
+      isTestWBTBAlarmScheduled = true
+      setTestWBTBAlarmStatus("Test WBTB alarm scheduled for about 10 seconds from now.")
+    } catch WBTBAlarmError.authorizationDenied {
+      setTestWBTBAlarmStatus("Alarm permission is off. Enable alarms in Settings to test this flow.")
+    } catch {
+      setTestWBTBAlarmStatus("Could not schedule the test alarm: \(error.localizedDescription)")
+    }
+  }
+
+  func cancelTestWBTBAlarm() {
+    scheduler.cancelTestWBTBAlarm()
+    isTestWBTBAlarmScheduled = false
+    setTestWBTBAlarmStatus("Test WBTB alarm cancelled.")
   }
 
   func save(settings newSettings: CueSettings, isWBTBAlarmEnabled newAlarmEnabled: Bool? = nil) async -> Bool {
@@ -269,7 +303,13 @@ final class AppModel {
   private func consumeWBTBAlarmRoute() {
     guard UserDefaults.standard.bool(forKey: WBTBAlarmService.openWBTBKey) else { return }
     UserDefaults.standard.removeObject(forKey: WBTBAlarmService.openWBTBKey)
+    isTestWBTBAlarmScheduled = false
     route = .wbtb
+  }
+
+  private func setTestWBTBAlarmStatus(_ message: String) {
+    testWBTBAlarmStatus = message
+    statusMessage = message
   }
 
   private func sendLatestSettings() {

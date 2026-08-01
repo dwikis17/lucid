@@ -38,6 +38,23 @@ struct SettingsView: View {
         }
       }
 
+      Section("Developer Mode") {
+        Button("Test WBTB alarm", systemImage: "alarm") {
+          didTapTestWBTBAlarm()
+        }
+        Text("Schedules a real alarm in about 10 seconds so you can test the full flow.")
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+        Text(appModel.testWBTBAlarmStatus ?? "Ready")
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+        if appModel.isTestWBTBAlarmScheduled {
+          Button("Cancel test alarm", systemImage: "xmark.circle", role: .destructive) {
+            appModel.cancelTestWBTBAlarm()
+          }
+        }
+      }
+
       Section("Privacy") {
         Toggle(
           "Protect app with Face ID",
@@ -109,6 +126,12 @@ struct SettingsView: View {
   private func didTapPermissionButton() {
     Task {
       await appModel.requestNotificationPermission()
+    }
+  }
+
+  private func didTapTestWBTBAlarm() {
+    Task {
+      await appModel.scheduleTestWBTBAlarm()
     }
   }
 

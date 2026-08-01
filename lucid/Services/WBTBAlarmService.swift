@@ -19,6 +19,7 @@ enum WBTBAlarmService {
   static let openWBTBKey = "lucid.openWBTBFromAlarm"
 
   private static let alarmID = UUID(uuidString: "9D2EA5A7-4D90-4F6A-A1C9-7C8E6E5D4B31") ?? UUID()
+  private static let testAlarmID = UUID(uuidString: "0A4AA1CB-5C8C-45F0-BB6D-8A49EEDB7A9B") ?? UUID()
 
   @available(iOS 26.0, *)
   static func reconcile(settings: CueSettings) async throws {
@@ -31,13 +32,7 @@ enum WBTBAlarmService {
       !settings.wbtbWeekdays.isEmpty
     else { return }
 
-    let authorization: AlarmManager.AuthorizationState
-    if AlarmManager.shared.authorizationState == .notDetermined {
-      authorization = try await AlarmManager.shared.requestAuthorization()
-    } else {
-      authorization = AlarmManager.shared.authorizationState
-    }
-    guard authorization == .authorized else {
+    guard try await isAuthorized() else {
       throw WBTBAlarmError.authorizationDenied
     }
 
@@ -51,6 +46,64 @@ enum WBTBAlarmService {
         repeats: .weekly(weekdays)
       )
     )
+    _ = try await AlarmManager.shared.schedule(
+      id: alarmID,
+      configuration: configuration(for: schedule)
+    )
+  }
+
+  @available(iOS 26.0, *)
+  static func scheduleTestAlarm() async throws {
+    cancelTestAlarm()
+    guard try await isAuthorized() else {
+      throw WBTBAlarmError.authorizationDenied
+    }
+    _ = try await AlarmManager.shared.schedule(
+      id: testAlarmID,
+      configuration: configuration(
+        for: .fixed(Date.now.addingTimeInterval(10))
+      )
+    )
+  }
+
+  static func cancel() {
+    if #available(iOS 26.0, *) {
+      try? AlarmManager.shared.cancel(id: alarmID)
+    }
+  }
+
+  static func cancelTestAlarm() {
+    if #available(iOS 26.0, *) {
+      try? AlarmManager.shared.cancel(id: testAlarmID)
+    }
+  }
+
+  @available(iOS 26.0, *)
+  private static func isAuthorized() async throws -> Bool {
+    if AlarmManager.shared.authorizationState == .notDetermined {
+      return try await AlarmManager.shared.requestAuthorization() == .authorized
+    }
+    return AlarmManager.shared.authorizationState == .authorized
+  }
+
+  @available(iOS 26.0, *)
+  private static func configuration(
+    for schedule: Alarm.Schedule
+  ) -> AlarmManager.AlarmConfiguration<Metadata> {
+    AlarmManager.AlarmConfiguration(
+      countdownDuration: .init(preAlert: nil, postAlert: 5 * 60),
+      schedule: schedule,
+      attributes: AlarmAttributes<Metadata>(
+        presentation: alarmPresentation(),
+        tintColor: .indigo
+      ),
+      stopIntent: OpenWBTBIntent(),
+      sound: .default
+    )
+  }
+
+  @available(iOS 26.0, *)
+  private static func alarmPresentation() -> AlarmPresentation {
     let stopButton = AlarmButton(
       text: "Open Lucid",
       textColor: .white,
@@ -61,7 +114,7 @@ enum WBTBAlarmService {
       textColor: .white,
       systemImageName: "zzz"
     )
-    let presentation = AlarmPresentation(
+    return AlarmPresentation(
       alert: .init(
         title: "Wake Back to Bed",
         stopButton: stopButton,
@@ -69,22 +122,6 @@ enum WBTBAlarmService {
         secondaryButtonBehavior: .countdown
       )
     )
-    let attributes = AlarmAttributes<Metadata>(presentation: presentation, tintColor: .indigo)
-    let configuration = AlarmManager.AlarmConfiguration(
-      countdownDuration: .init(preAlert: nil, postAlert: 5 * 60),
-      schedule: schedule,
-      attributes: attributes,
-      stopIntent: OpenWBTBIntent(),
-      sound: .default
-    )
-
-    _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
-  }
-
-  static func cancel() {
-    if #available(iOS 26.0, *) {
-      try? AlarmManager.shared.cancel(id: alarmID)
-    }
   }
 
   @available(iOS 26.0, *)
