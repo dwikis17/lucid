@@ -32,7 +32,7 @@ struct LucidCueApp: App {
     let cloudConfiguration = ModelConfiguration(
       "Lucid",
       schema: schema,
-      cloudKitDatabase: .private
+      cloudKitDatabase: .private("iCloud.com.dwiki.lucid")
     )
 
     do {

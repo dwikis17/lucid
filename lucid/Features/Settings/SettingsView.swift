@@ -44,8 +44,8 @@ struct SettingsView: View {
           isOn: $isAppLockEnabled
         )
         Text(
-          "Your journal, progress, and cue settings stay on this device for now. Lucid Cue " +
-            "does not send your data to a server."
+          "Your journal and progress sync through your private iCloud account when available. " +
+            "Cue settings stay on this device, and Lucid Cue does not send your data to a server."
         )
         Text(
           "Lucid Cue is a habit-training and wellness application. Results vary, and the " +

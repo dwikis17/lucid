@@ -4,7 +4,7 @@ import SwiftData
 @Model
 final class StoredRealityCheckEvent {
   var id: UUID = UUID()
-  var timestamp: Date = .now
+  var timestamp: Date = Date.now
   var sourceRawValue: String = RealityCheckEvent.Source.iPhoneManual.rawValue
   var resultRawValue: String = RealityCheckEvent.Result.skipped.rawValue
   var cueWord: String = ""
