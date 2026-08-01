@@ -3,9 +3,9 @@ import SwiftData
 
 @Model
 final class StoredWBTBSession {
-  var id: UUID
-  var completedAt: Date
-  var routineMinutes: Int
+  var id: UUID = UUID()
+  var completedAt: Date = Date.now
+  var routineMinutes: Int = 5
 
   init(id: UUID = UUID(), completedAt: Date = .now, routineMinutes: Int = 5) {
     self.id = id

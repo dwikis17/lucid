@@ -3,14 +3,14 @@ import SwiftData
 
 @Model
 final class DreamEntry {
-  var id: UUID
-  var createdAt: Date
-  var updatedAt: Date
-  var dreamDate: Date
-  var title: String
-  var content: String
-  var lucidityRawValue: Int
-  var isDraft: Bool
+  var id: UUID = UUID()
+  var createdAt: Date = Date.now
+  var updatedAt: Date = Date.now
+  var dreamDate: Date = Date.now
+  var title: String = ""
+  var content: String = ""
+  var lucidityRawValue: Int = LucidityLevel.unaware.rawValue
+  var isDraft: Bool = true
 
   init(
     id: UUID = UUID(),
