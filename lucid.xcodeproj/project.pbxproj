@@ -357,6 +357,9 @@
 					937483763019F3A600AB02CA = {
 						CreatedOnToolsVersion = 26.6;
 						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
 							com.apple.InAppPurchase = {
 								enabled = 1;
 							};

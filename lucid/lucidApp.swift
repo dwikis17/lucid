@@ -4,6 +4,8 @@ import RevenueCat
 
 @main
 struct LucidCueApp: App {
+  private static let cloudContainerIdentifier = "iCloud.com.dwiki.lucid"
+
   private let modelContainer: ModelContainer
   @State private var appModel: AppModel
 
@@ -32,8 +34,26 @@ struct LucidCueApp: App {
     let cloudConfiguration = ModelConfiguration(
       "Lucid",
       schema: schema,
-      cloudKitDatabase: .private("iCloud.com.dwiki.lucid")
+      cloudKitDatabase: .private(Self.cloudContainerIdentifier)
     )
+
+    #if DEBUG
+    if ProcessInfo.processInfo.arguments.contains("-InitializeCloudKitSchema") {
+      do {
+        try CloudKitSchemaInitializer.initialize(
+          configuration: cloudConfiguration,
+          containerIdentifier: Self.cloudContainerIdentifier,
+          modelTypes: [
+            DreamEntry.self,
+            StoredRealityCheckEvent.self,
+            StoredWBTBSession.self,
+          ]
+        )
+      } catch {
+        fatalError("CloudKit schema initialization failed: \(error)")
+      }
+    }
+    #endif
 
     do {
       return try ModelContainer(for: schema, configurations: [cloudConfiguration])
