@@ -7,6 +7,7 @@ struct SetupView: View {
   @State private var daytimeEnd = Date.now
   @State private var bedtime = Date.now
   @State private var morningReminder = Date.now
+  @State private var isWBTBAlarmEnabled = false
   @State private var isLoaded = false
   @State private var validationErrors: [String] = []
   @State private var isSaving = false
@@ -45,9 +46,11 @@ struct SetupView: View {
             }
           }
           .disabled(!draft.isNightCueEnabled)
+          Toggle("Use as wake-up alarm", isOn: $isWBTBAlarmEnabled)
+            .disabled(!draft.isNightCueEnabled)
           Text(
-            "The iPhone schedules a gentle local cue. The system controls exact delivery and " +
-              "whether it appears on iPhone or Apple Watch."
+            "Gentle cue is the default. Alarm mode uses the system alarm when available; older " +
+              "iOS versions use a time-sensitive notification. Lucid cannot guarantee a wake-up."
           )
           .font(.footnote)
           .foregroundStyle(.secondary)
@@ -143,6 +146,7 @@ struct SetupView: View {
   private func loadSettings() {
     guard !isLoaded else { return }
     draft = appModel.settings
+    isWBTBAlarmEnabled = appModel.isWBTBAlarmEnabled
     daytimeStart = date(for: draft.daytimeStartMinutes)
     daytimeEnd = date(for: draft.daytimeEndMinutes)
     bedtime = date(for: draft.bedtimeMinutes)
@@ -162,8 +166,12 @@ struct SetupView: View {
 
     isSaving = true
     Task {
-      let saved = await appModel.save(settings: draft)
+      let saved = await appModel.save(
+        settings: draft,
+        isWBTBAlarmEnabled: isWBTBAlarmEnabled
+      )
       isSaving = false
+      isWBTBAlarmEnabled = appModel.isWBTBAlarmEnabled
       if saved {
         didSave = true
       } else {

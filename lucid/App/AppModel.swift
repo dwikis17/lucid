@@ -8,6 +8,7 @@ import UserNotifications
 @Observable
 final class AppModel {
   private(set) var settings: CueSettings
+  private(set) var isWBTBAlarmEnabled: Bool
   private(set) var authorizationStatus = UNAuthorizationStatus.notDetermined
   private(set) var nextDaytimeReminder: Date?
   private(set) var nextNightCue: Date?
@@ -40,6 +41,7 @@ final class AppModel {
     self.appLock = appLock
     self.purchaseManager = purchaseManager
     settings = settingsRepository.settings
+    isWBTBAlarmEnabled = settingsRepository.isWBTBAlarmEnabled
     notificationDelegate = NotificationDelegate()
 
     configureNotificationDelegate()
@@ -52,12 +54,14 @@ final class AppModel {
   func didLaunch() async {
     await purchaseManager.start()
     await reconcileNotificationState()
+    consumeWBTBAlarmRoute()
     sendLatestSettings()
   }
 
   func didBecomeActive() async {
     await purchaseManager.refresh()
     await reconcileNotificationState()
+    consumeWBTBAlarmRoute()
     sendLatestSettings()
   }
 
@@ -70,7 +74,7 @@ final class AppModel {
     }
   }
 
-  func save(settings newSettings: CueSettings) async -> Bool {
+  func save(settings newSettings: CueSettings, isWBTBAlarmEnabled newAlarmEnabled: Bool? = nil) async -> Bool {
     let errors = CueSettingsValidator.errors(for: newSettings)
     guard errors.isEmpty else {
       statusMessage = errors.joined(separator: "\n")
@@ -78,11 +82,15 @@ final class AppModel {
     }
 
     do {
-      try settingsRepository.save(newSettings)
+      try settingsRepository.save(
+        newSettings,
+        isWBTBAlarmEnabled: newAlarmEnabled ?? isWBTBAlarmEnabled
+      )
       settings = settingsRepository.settings
+      isWBTBAlarmEnabled = settingsRepository.isWBTBAlarmEnabled
       await reconcileReminders()
       sendLatestSettings()
-      return true
+      return !(newAlarmEnabled == true && !isWBTBAlarmEnabled)
     } catch {
       statusMessage = "Could not save settings: \(error.localizedDescription)"
       return false
@@ -90,25 +98,49 @@ final class AppModel {
   }
 
   private func reconcileReminders() async {
-    guard isNotificationAuthorized else {
-      statusMessage = "Enable notifications in Settings to schedule reality-check cues."
-      await refreshScheduleState()
-      return
-    }
-
     do {
-      if purchaseManager.isPro {
-        try await scheduler.reconcileDaytimeNotifications(settings: settings, startingFrom: .now)
+      if isNotificationAuthorized {
+        if purchaseManager.isPro {
+          try await scheduler.reconcileDaytimeNotifications(settings: settings, startingFrom: .now)
+        } else {
+          await scheduler.cancelDaytimeNotifications()
+        }
+        try await scheduler.reconcileMorningJournalReminder(settings: settings)
       } else {
         await scheduler.cancelDaytimeNotifications()
       }
-      try await scheduler.reconcileMorningJournalReminder(settings: settings)
+
       if purchaseManager.isPro {
-        try await scheduler.reconcileWBTBNotifications(settings: settings)
+        try await scheduler.reconcileWBTBNotifications(
+          settings: settings,
+          alarmEnabled: isWBTBAlarmEnabled
+        )
       } else {
         var freeSettings = settings
         freeSettings.isNightCueEnabled = false
-        try await scheduler.reconcileWBTBNotifications(settings: freeSettings)
+        try await scheduler.reconcileWBTBNotifications(
+          settings: freeSettings,
+          alarmEnabled: false
+        )
+      }
+      await refreshScheduleState()
+
+      let alarmCanRunWithoutNotifications = if #available(iOS 26.0, *) {
+        isWBTBAlarmEnabled
+      } else {
+        false
+      }
+      if !isNotificationAuthorized && !alarmCanRunWithoutNotifications {
+        statusMessage = "Enable notifications in Settings to schedule reality-check and WBTB cues."
+      }
+    } catch WBTBAlarmError.authorizationDenied {
+      isWBTBAlarmEnabled = false
+      try? settingsRepository.save(settings, isWBTBAlarmEnabled: false)
+      statusMessage = "Alarm permission is off. Gentle WBTB cues remain enabled."
+      do {
+        try await scheduler.reconcileWBTBNotifications(settings: settings, alarmEnabled: false)
+      } catch {
+        statusMessage = "Could not schedule WBTB cues: \(error.localizedDescription)"
       }
       await refreshScheduleState()
     } catch {
@@ -231,11 +263,13 @@ final class AppModel {
 
   private func reconcileNotificationState() async {
     authorizationStatus = await authorizationService.authorizationStatus()
-    if isNotificationAuthorized {
-      await reconcileReminders()
-    } else {
-      await refreshScheduleState()
-    }
+    await reconcileReminders()
+  }
+
+  private func consumeWBTBAlarmRoute() {
+    guard UserDefaults.standard.bool(forKey: WBTBAlarmService.openWBTBKey) else { return }
+    UserDefaults.standard.removeObject(forKey: WBTBAlarmService.openWBTBKey)
+    route = .wbtb
   }
 
   private func sendLatestSettings() {

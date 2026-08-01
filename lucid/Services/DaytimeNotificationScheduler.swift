@@ -11,11 +11,15 @@ protocol DaytimeNotificationScheduling {
   func nextScheduledDaytimeNotification() async -> Date?
   func scheduleSnooze(cueWord: String, after seconds: TimeInterval) async throws
   func reconcileWBTBNotifications(settings: CueSettings) async throws
+  func reconcileWBTBNotifications(settings: CueSettings, alarmEnabled: Bool) async throws
   func reconcileMorningJournalReminder(settings: CueSettings) async throws
 }
 
 extension DaytimeNotificationScheduling {
   func reconcileWBTBNotifications(settings: CueSettings) async throws {}
+  func reconcileWBTBNotifications(settings: CueSettings, alarmEnabled: Bool) async throws {
+    try await reconcileWBTBNotifications(settings: settings)
+  }
   func reconcileMorningJournalReminder(settings: CueSettings) async throws {}
 }
 
@@ -125,22 +129,38 @@ struct DaytimeNotificationScheduler: DaytimeNotificationScheduling {
   }
 
   func reconcileWBTBNotifications(settings: CueSettings) async throws {
+    try await reconcileWBTBNotifications(settings: settings, alarmEnabled: false)
+  }
+
+  func reconcileWBTBNotifications(settings: CueSettings, alarmEnabled: Bool) async throws {
     let existing = await center.pendingNotificationRequests()
       .map(\.identifier)
       .filter { $0.hasPrefix(NotificationIdentifiers.wbtbPrefix) }
     center.removePendingNotificationRequests(withIdentifiers: existing)
+    WBTBAlarmService.cancel()
 
     guard
       settings.isEnabled,
       settings.isNightCueEnabled,
-      settings.hasAcknowledgedWBTBSafety
+      settings.hasAcknowledgedWBTBSafety,
+      !settings.wbtbWeekdays.isEmpty
     else { return }
+
+    if alarmEnabled, #available(iOS 26.0, *) {
+      try await WBTBAlarmService.reconcile(settings: settings)
+      return
+    }
+
     let minutes = DateCalculator.nightCueMinutes(settings: settings)
     for weekday in settings.wbtbWeekdays {
       let content = UNMutableNotificationContent()
       content.title = "Wake Back to Bed"
       content.body = "Recall a dream, set your intention, then return to sleep."
       content.userInfo = ["type": "wbtb"]
+      if alarmEnabled {
+        content.interruptionLevel = .timeSensitive
+        content.sound = .default
+      }
       try await center.add(
         UNNotificationRequest(
           identifier: "\(NotificationIdentifiers.wbtbPrefix)\(weekday)",

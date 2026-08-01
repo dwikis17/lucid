@@ -79,7 +79,11 @@ struct WBTBView: View {
     case 1:
       "Imagine noticing that detail in a dream. Repeat: next time I’m dreaming, I’ll remember I’m dreaming."
     default:
-      "Let the thought go and return to sleep. Lucid Cue does not guarantee a wake-up or a lucid dream."
+      if appModel.isWBTBAlarmEnabled {
+        "Your WBTB alarm is set for the selected nights. Let the thought go and return to sleep; Lucid Cue cannot guarantee a wake-up or a lucid dream."
+      } else {
+        "Let the thought go and return to sleep. Lucid Cue does not guarantee a wake-up or a lucid dream."
+      }
     }
   }
 
