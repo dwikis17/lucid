@@ -54,11 +54,14 @@ struct SetupView: View {
           )
           .font(.footnote)
           .foregroundStyle(.secondary)
-        }
+      }
 
-        Section("WBTB nights") {
-          Toggle("I am 18 or older", isOn: $draft.hasAcknowledgedWBTBSafety)
-          ForEach(1...7, id: \.self) { weekday in
+      Section("WBTB nights") {
+        Toggle("I understand the WBTB safety notice", isOn: $draft.hasAcknowledgedWBTBSafety)
+        Text("WBTB can interrupt sleep. Skip it when you need uninterrupted rest; Lucid cannot guarantee a wake-up.")
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+        ForEach(1...7, id: \.self) { weekday in
             Button {
               toggleWeekday(weekday)
             } label: {
