@@ -38,11 +38,23 @@ struct LucidCueApp: App {
     do {
       return try ModelContainer(for: schema, configurations: [cloudConfiguration])
     } catch {
-      let localConfiguration = ModelConfiguration("Lucid", schema: schema)
+      let cloudErrorDescription = error.localizedDescription
+      // CloudKit entitlements can make an unspecified configuration automatic.
+      // Explicitly disable CloudKit so the existing local store remains usable
+      // when the private container is unavailable or not yet deployed.
+      let localConfiguration = ModelConfiguration(
+        "Lucid",
+        schema: schema,
+        cloudKitDatabase: .none
+      )
       do {
         return try ModelContainer(for: schema, configurations: [localConfiguration])
       } catch {
-        fatalError("Could not create the Lucid data store: \(error.localizedDescription)")
+        fatalError(
+          "Could not create the Lucid data store. " +
+            "CloudKit: \(cloudErrorDescription). " +
+            "Local: \(error.localizedDescription)"
+        )
       }
     }
   }
