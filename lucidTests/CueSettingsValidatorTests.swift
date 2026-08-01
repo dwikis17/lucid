@@ -20,4 +20,12 @@ struct CueSettingsValidatorTests {
     #expect(errors.contains("The cue word cannot contain a new line."))
     #expect(errors.contains("The daytime window must be at least 6 hours."))
   }
+
+  @Test
+  func moreThanTwoWBTBNightsIsRejected() {
+    var settings = CueSettings.defaultValue
+    settings.wbtbWeekdays = [1, 2, 3]
+
+    #expect(CueSettingsValidator.errors(for: settings).contains("Choose up to two WBTB nights."))
+  }
 }

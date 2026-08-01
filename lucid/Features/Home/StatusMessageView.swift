@@ -16,8 +16,6 @@ struct StatusMessageView: View {
         .labelStyle(.iconOnly)
         .accessibilityLabel("Dismiss status")
     }
-    .padding()
-    .background(.thinMaterial)
-    .clipShape(.rect(cornerRadius: 12))
+    .lucidCard(cornerRadius: 12)
   }
 }

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		937483C73019F59000AB02CA /* lucid-watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 937483A73019F58E00AB02CA /* lucid-watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E1A1C0010000000000000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = E1A1C1010000000000000001 /* RevenueCat */; };
+		E1A1C0010000000000000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = E1A1C1010000000000000002 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -114,6 +116,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E1A1C0010000000000000001 /* RevenueCat in Frameworks */,
+				E1A1C0010000000000000002 /* RevenueCatUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -205,6 +209,8 @@
 			);
 			name = lucid;
 			packageProductDependencies = (
+				E1A1C1010000000000000001 /* RevenueCat */,
+				E1A1C1010000000000000002 /* RevenueCatUI */,
 			);
 			productName = lucid;
 			productReference = 937483773019F3A600AB02CA /* lucid.app */;
@@ -337,6 +343,11 @@
 				TargetAttributes = {
 					937483763019F3A600AB02CA = {
 						CreatedOnToolsVersion = 26.6;
+						SystemCapabilities = {
+							com.apple.InAppPurchase = {
+								enabled = 1;
+							};
+						};
 					};
 					937483853019F3A800AB02CA = {
 						CreatedOnToolsVersion = 26.6;
@@ -368,6 +379,9 @@
 			);
 			mainGroup = 9374836E3019F3A600AB02CA;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E1A1C2010000000000000001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 937483783019F3A600AB02CA /* Products */;
 			projectDirPath = "";
@@ -633,6 +647,7 @@
 				DEVELOPMENT_TEAM = 6YQB49MLC8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock your private dream journal.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -664,6 +679,7 @@
 				DEVELOPMENT_TEAM = 6YQB49MLC8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock your private dream journal.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -990,6 +1006,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E1A1C2010000000000000001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E1A1C1010000000000000001 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1A1C2010000000000000001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		E1A1C1010000000000000002 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1A1C2010000000000000001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9374836F3019F3A600AB02CA /* Project object */;
 }

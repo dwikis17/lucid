@@ -6,6 +6,8 @@ final class NotificationDelegate:
   @preconcurrency UNUserNotificationCenterDelegate
 {
   var didOpenRealityCheck: ((RealityCheckEvent.Source) -> Void)?
+  var didOpenMorningJournal: (() -> Void)?
+  var didOpenWBTB: (() -> Void)?
   var didChooseResult: ((RealityCheckEvent.Result, String) -> Void)?
   var didChooseSnooze: ((String) -> Void)?
 
@@ -22,6 +24,19 @@ final class NotificationDelegate:
   ) async {
     let cueWord = response.notification.request.content.userInfo["cueWord"] as? String
       ?? CueSettings.defaultValue.cueWord
+    let type = response.notification.request.content.userInfo["type"] as? String
+
+    if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+      switch type {
+      case "morningJournal":
+        didOpenMorningJournal?()
+      case "wbtb":
+        didOpenWBTB?()
+      default:
+        didOpenRealityCheck?(.iPhoneNotification)
+      }
+      return
+    }
 
     switch response.actionIdentifier {
     case NotificationActionIdentifiers.checked:
@@ -30,8 +45,6 @@ final class NotificationDelegate:
       didChooseResult?(.skipped, cueWord)
     case NotificationActionIdentifiers.snooze:
       didChooseSnooze?(cueWord)
-    case UNNotificationDefaultActionIdentifier:
-      didOpenRealityCheck?(.iPhoneNotification)
     default:
       break
     }

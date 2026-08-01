@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>SchemeUserState</key>
+	<dict>
+		<key>lucid-watch Watch App.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
+		<key>lucid.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>3</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>937483763019F3A600AB02CA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>937483853019F3A800AB02CA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>9374838F3019F3A800AB02CA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>937483A63019F58E00AB02CA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>937483B23019F59000AB02CA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>937483BC3019F59000AB02CA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+	</dict>
+</dict>
+</plist>

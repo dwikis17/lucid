@@ -1,10 +1,10 @@
 import Foundation
 
 enum DateCalculator {
-  /// Produces one stable reminder in each portion of the configured window.
+  /// Produces one stable weekly reminder in each portion of the configured window.
   ///
-  /// The seed is based on the local calendar day and cue word, so rebuilding the
-  /// seven-day schedule does not move reminders around unexpectedly.
+  /// The seed is based on the weekday and cue word, so rebuilding repeating
+  /// notifications does not move reminders around unexpectedly.
   static func generateReminderDates(
     for day: Date,
     settings: CueSettings,
@@ -30,11 +30,16 @@ enum DateCalculator {
       let lowerInset = min(10, max(0, segmentLength / 5))
       let available = max(1, segmentLength - lowerInset * 2)
       let offset = lowerInset + Int(generator.next() % UInt64(available))
-      var minutes = min(settings.daytimeEndMinutes - 1, segmentStart + offset)
+      var minutes = min(settings.daytimeEndMinutes, segmentStart + offset)
       if let previous = minuteValues.last {
         minutes = max(minutes, previous + 90)
       }
       minuteValues.append(minutes)
+    }
+
+    if let last = minuteValues.last, last > settings.daytimeEndMinutes {
+      let overflow = last - settings.daytimeEndMinutes
+      minuteValues = minuteValues.map { $0 - overflow }
     }
 
     return minuteValues
@@ -45,10 +50,10 @@ enum DateCalculator {
       .sorted()
   }
 
-  /// Calculates the first future bedtime-plus-delay date using calendar arithmetic.
+  /// Calculates the next fixed local cue time derived from bedtime plus delay.
   ///
-  /// Calendar addition preserves local time behavior across time-zone and daylight
-  /// saving changes. The result is a gentle notification time, not an exact alarm.
+  /// This matches a repeating calendar notification: local clock time is preserved
+  /// across time-zone and daylight-saving changes, not exact elapsed duration.
   static func nextNightCueDate(
     settings: CueSettings,
     now: Date,
@@ -57,20 +62,10 @@ enum DateCalculator {
     guard settings.isEnabled, settings.isNightCueEnabled else { return nil }
 
     let startOfToday = calendar.startOfDay(for: now)
+    let cueMinutes = nightCueMinutes(settings: settings)
     guard
-      let bedtimeToday = calendar.date(
-        byAdding: .minute,
-        value: settings.bedtimeMinutes,
-        to: startOfToday
-      ),
-      let cueToday = calendar.date(
-        byAdding: .hour,
-        value: settings.nightCueDelayHours,
-        to: bedtimeToday
-      )
-    else {
-      return nil
-    }
+      let cueToday = calendar.date(byAdding: .minute, value: cueMinutes, to: startOfToday)
+    else { return nil }
 
     if cueToday > now {
       return cueToday
@@ -78,14 +73,17 @@ enum DateCalculator {
     return calendar.date(byAdding: .day, value: 1, to: cueToday)
   }
 
+  static func nightCueMinutes(settings: CueSettings) -> Int {
+    (settings.bedtimeMinutes + settings.nightCueDelayHours * 60) % (24 * 60)
+  }
+
   private static func seed(
     for date: Date,
     settings: CueSettings,
     calendar: Calendar
   ) -> UInt64 {
-    let components = calendar.dateComponents([.year, .month, .day], from: date)
-    let value = "\(components.year ?? 0)-\(components.month ?? 0)-" +
-      "\(components.day ?? 0)-\(settings.cueWord)"
+    let weekday = calendar.component(.weekday, from: date)
+    let value = "\(weekday)-\(settings.cueWord)"
     return value.utf8.reduce(14_695_981_039_346_656_037) { partial, byte in
       (partial ^ UInt64(byte)) &* 1_099_511_628_211
     }

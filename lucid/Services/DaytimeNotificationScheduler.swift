@@ -1,28 +1,22 @@
 import Foundation
 import UserNotifications
 
-protocol UserNotificationCenterProtocol {
-  func add(_ request: UNNotificationRequest) async throws
-  func pendingNotificationRequests() async -> [UNNotificationRequest]
-  func removePendingNotificationRequests(withIdentifiers identifiers: [String])
-  func removeAllPendingNotificationRequests()
-  func setNotificationCategories(_ categories: Set<UNNotificationCategory>)
-}
-
-extension UNUserNotificationCenter: UserNotificationCenterProtocol {}
-
 protocol DaytimeNotificationScheduling {
   func registerCategory()
-  func scheduleDaytimeNotifications(
+  func reconcileDaytimeNotifications(
     settings: CueSettings,
     startingFrom date: Date
   ) async throws
   func cancelDaytimeNotifications() async
   func nextScheduledDaytimeNotification() async -> Date?
   func scheduleSnooze(cueWord: String, after seconds: TimeInterval) async throws
-  func scheduleTest(cueWord: String, after seconds: TimeInterval) async throws
-  func pendingIdentifiers() async -> [String]
-  func clearAllPendingNotifications()
+  func reconcileWBTBNotifications(settings: CueSettings) async throws
+  func reconcileMorningJournalReminder(settings: CueSettings) async throws
+}
+
+extension DaytimeNotificationScheduling {
+  func reconcileWBTBNotifications(settings: CueSettings) async throws {}
+  func reconcileMorningJournalReminder(settings: CueSettings) async throws {}
 }
 
 struct DaytimeNotificationScheduler: DaytimeNotificationScheduling {
@@ -58,57 +52,49 @@ struct DaytimeNotificationScheduler: DaytimeNotificationScheduling {
     center.setNotificationCategories([category])
   }
 
-  /// Replaces only Lucid Cue daytime requests with seven deterministic local days.
+  /// Reconciles a deterministic weekly pattern of repeating local notifications.
   ///
-  /// Pending requests are intentionally bounded to 35 or fewer. Delivery remains
-  /// subject to Focus, notification settings, and system power management.
-  func scheduleDaytimeNotifications(
+  /// New requests are installed before stale requests are removed, preserving the
+  /// current schedule if installation fails.
+  func reconcileDaytimeNotifications(
     settings: CueSettings,
     startingFrom date: Date
   ) async throws {
-    await cancelDaytimeNotifications()
-    guard settings.isEnabled else { return }
+    guard settings.isEnabled else {
+      await cancelDaytimeNotifications()
+      return
+    }
 
-    for dayOffset in 0..<7 {
-      guard let day = calendar.date(byAdding: .day, value: dayOffset, to: date) else {
-        continue
-      }
-      let dates = DateCalculator.generateReminderDates(
-        for: day,
-        settings: settings,
-        calendar: calendar,
-        excludingPastDatesBefore: date
-      )
+    let existingIdentifiers = Set(
+      await center.pendingNotificationRequests()
+        .map(\.identifier)
+        .filter { $0.hasPrefix(NotificationIdentifiers.daytimePrefix) }
+    )
+    let requests = notificationRequests(settings: settings, startingFrom: date)
+    let expectedIdentifiers = Set(requests.map(\.identifier))
+    var newlyAddedIdentifiers: [String] = []
 
-      for (index, reminderDate) in dates.enumerated() {
-        let identifier = identifier(for: reminderDate, index: index)
-        let content = notificationContent(
-          title: settings.cueWord,
-          body: "Pause for a moment. Are you dreaming?",
-          cueWord: settings.cueWord,
-          isSoundEnabled: settings.isSoundEnabled
-        )
-        let components = calendar.dateComponents(
-          [.year, .month, .day, .hour, .minute],
-          from: reminderDate
-        )
-        let trigger = UNCalendarNotificationTrigger(
-          dateMatching: components,
-          repeats: false
-        )
-        try await center.add(
-          UNNotificationRequest(
-            identifier: identifier,
-            content: content,
-            trigger: trigger
-          )
-        )
+    do {
+      for request in requests {
+        try await center.add(request)
+        if !existingIdentifiers.contains(request.identifier) {
+          newlyAddedIdentifiers.append(request.identifier)
+        }
       }
+    } catch {
+      center.removePendingNotificationRequests(withIdentifiers: newlyAddedIdentifiers)
+      throw error
+    }
+
+    let staleIdentifiers = Array(existingIdentifiers.subtracting(expectedIdentifiers))
+    if !staleIdentifiers.isEmpty {
+      center.removePendingNotificationRequests(withIdentifiers: staleIdentifiers)
     }
   }
 
   func cancelDaytimeNotifications() async {
-    let identifiers = await pendingIdentifiers()
+    let identifiers = await center.pendingNotificationRequests()
+      .map(\.identifier)
       .filter { $0.hasPrefix(NotificationIdentifiers.daytimePrefix) }
     center.removePendingNotificationRequests(withIdentifiers: identifiers)
   }
@@ -131,43 +117,116 @@ struct DaytimeNotificationScheduler: DaytimeNotificationScheduling {
     )
     try await center.add(
       UNNotificationRequest(
-        identifier: "\(NotificationIdentifiers.test).snooze.\(UUID().uuidString)",
+        identifier: "\(NotificationIdentifiers.snoozePrefix)\(UUID().uuidString)",
         content: content,
         trigger: UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
       )
     )
   }
 
-  func scheduleTest(cueWord: String, after seconds: TimeInterval = 10) async throws {
-    let content = notificationContent(
-      title: cueWord,
-      body: "Test cue: are you dreaming?",
-      cueWord: cueWord,
-      isSoundEnabled: false
-    )
+  func reconcileWBTBNotifications(settings: CueSettings) async throws {
+    let existing = await center.pendingNotificationRequests()
+      .map(\.identifier)
+      .filter { $0.hasPrefix(NotificationIdentifiers.wbtbPrefix) }
+    center.removePendingNotificationRequests(withIdentifiers: existing)
+
+    guard
+      settings.isEnabled,
+      settings.isNightCueEnabled,
+      settings.hasAcknowledgedWBTBSafety
+    else { return }
+    let minutes = DateCalculator.nightCueMinutes(settings: settings)
+    for weekday in settings.wbtbWeekdays {
+      let content = UNMutableNotificationContent()
+      content.title = "Wake Back to Bed"
+      content.body = "Recall a dream, set your intention, then return to sleep."
+      content.userInfo = ["type": "wbtb"]
+      try await center.add(
+        UNNotificationRequest(
+          identifier: "\(NotificationIdentifiers.wbtbPrefix)\(weekday)",
+          content: content,
+          trigger: UNCalendarNotificationTrigger(
+            dateMatching: DateComponents(
+              hour: minutes / 60,
+              minute: minutes % 60,
+              weekday: weekday
+            ),
+            repeats: true
+          )
+        )
+      )
+    }
+  }
+
+  func reconcileMorningJournalReminder(settings: CueSettings) async throws {
+    center.removePendingNotificationRequests(withIdentifiers: [NotificationIdentifiers.morningJournal])
+    guard settings.isEnabled, settings.isMorningReminderEnabled else { return }
+    let content = UNMutableNotificationContent()
+    content.title = "Remember your dream"
+    content.body = "Write down what you remember before it fades."
+    content.userInfo = ["type": "morningJournal"]
     try await center.add(
       UNNotificationRequest(
-        identifier: NotificationIdentifiers.test,
+        identifier: NotificationIdentifiers.morningJournal,
         content: content,
-        trigger: UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
+        trigger: UNCalendarNotificationTrigger(
+          dateMatching: DateComponents(
+            hour: settings.morningReminderMinutes / 60,
+            minute: settings.morningReminderMinutes % 60
+          ),
+          repeats: true
+        )
       )
     )
   }
 
-  func pendingIdentifiers() async -> [String] {
-    await center.pendingNotificationRequests()
-      .map(\.identifier)
-      .sorted()
+  private func notificationRequests(
+    settings: CueSettings,
+    startingFrom date: Date
+  ) -> [UNNotificationRequest] {
+    let scheduleKey = scheduleKey(for: settings)
+    let startOfDay = calendar.startOfDay(for: date)
+
+    return (0..<7).flatMap { dayOffset -> [UNNotificationRequest] in
+      guard let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfDay) else {
+        return []
+      }
+      let weekday = calendar.component(.weekday, from: day)
+      return DateCalculator.generateReminderDates(
+        for: day,
+        settings: settings,
+        calendar: calendar
+      )
+      .enumerated()
+      .map { index, reminderDate in
+        let components = calendar.dateComponents([.weekday, .hour, .minute], from: reminderDate)
+        return UNNotificationRequest(
+          identifier: "\(NotificationIdentifiers.daytimePrefix)" +
+            "v2.\(scheduleKey).\(weekday).\(index)",
+          content: notificationContent(
+            title: settings.cueWord,
+            body: "Pause for a moment. Are you dreaming?",
+            cueWord: settings.cueWord,
+            isSoundEnabled: settings.isSoundEnabled
+          ),
+          trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        )
+      }
+    }
   }
 
-  func clearAllPendingNotifications() {
-    center.removeAllPendingNotificationRequests()
-  }
-
-  private func identifier(for date: Date, index: Int) -> String {
-    let components = calendar.dateComponents([.year, .month, .day], from: date)
-    return "\(NotificationIdentifiers.daytimePrefix)" +
-      "\(components.year ?? 0)-\(components.month ?? 0)-\(components.day ?? 0)-\(index)"
+  private func scheduleKey(for settings: CueSettings) -> String {
+    let value = [
+      settings.cueWord,
+      String(settings.daytimeReminderCount),
+      String(settings.daytimeStartMinutes),
+      String(settings.daytimeEndMinutes),
+      settings.isSoundEnabled.description,
+    ].joined(separator: "|")
+    let hash = value.utf8.reduce(UInt64(14_695_981_039_346_656_037)) { partial, byte in
+      (partial ^ UInt64(byte)) &* 1_099_511_628_211
+    }
+    return String(hash, radix: 16)
   }
 
   private func notificationContent(

@@ -15,8 +15,6 @@ struct DashboardMetricCard: View {
         .contentTransition(.numericText())
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding()
-    .background(.regularMaterial)
-    .clipShape(.rect(cornerRadius: 16))
+    .lucidCard()
   }
 }

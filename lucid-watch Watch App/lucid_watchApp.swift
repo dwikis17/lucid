@@ -9,6 +9,7 @@ struct LucidCueWatchApp: App {
     WindowGroup {
       ContentView()
         .environment(appModel)
+        .preferredColorScheme(.dark)
     }
     .onChange(of: scenePhase) { _, newValue in
       guard newValue == .active else { return }

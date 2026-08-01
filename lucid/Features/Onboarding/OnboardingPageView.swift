@@ -6,8 +6,8 @@ struct OnboardingPageView: View {
   var body: some View {
     VStack(spacing: 24) {
       Image(systemName: page.symbol)
-        .font(.largeTitle)
-        .foregroundStyle(.tint)
+        .symbolRenderingMode(.hierarchical)
+        .lucidHeroSymbol()
         .accessibilityHidden(true)
 
       Text(page.title)

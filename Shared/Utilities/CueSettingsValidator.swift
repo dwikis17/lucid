@@ -23,6 +23,18 @@ enum CueSettingsValidator {
     if ![4, 5, 6].contains(settings.nightCueDelayHours) {
       errors.append("Choose a night delay of 4, 5, or 6 hours.")
     }
+    if settings.wbtbWeekdays.count > 2 {
+      errors.append("Choose up to two WBTB nights.")
+    }
+    if settings.wbtbWeekdays.contains(where: { !(1...7).contains($0) }) {
+      errors.append("Choose valid WBTB weekdays.")
+    }
+    if ![5, 10].contains(settings.wbtbRoutineMinutes) {
+      errors.append("Choose a 5- or 10-minute WBTB routine.")
+    }
+    if !(0..<(24 * 60)).contains(settings.morningReminderMinutes) {
+      errors.append("Choose a valid morning reminder time.")
+    }
 
     return errors
   }

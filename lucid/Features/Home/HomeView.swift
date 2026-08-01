@@ -30,7 +30,7 @@ struct HomeView: View {
           symbol: "sun.max"
         )
         DashboardMetricCard(
-          title: "Next nighttime cue",
+          title: "Next WBTB cue",
           value: appModel.nextNightCue?.formatted(date: .abbreviated, time: .shortened)
             ?? "Disabled",
           symbol: "moon.stars"
@@ -46,27 +46,27 @@ struct HomeView: View {
           systemImage: "hand.raised",
           action: didTapRealityCheckButton
         )
-        .buttonStyle(.borderedProminent)
+        .lucidPrimaryButton()
         .controlSize(.large)
         .frame(maxWidth: .infinity)
 
         Button(
-          "Test Watch Cue",
-          systemImage: "applewatch",
-          action: appModel.testWatchCue
+          "Record a Dream",
+          systemImage: "square.and.pencil",
+          action: appModel.beginDreamEntry
         )
         .buttonStyle(.bordered)
         .controlSize(.large)
         .frame(maxWidth: .infinity)
 
-        Button(
-          "Reschedule Reminders",
-          systemImage: "arrow.clockwise",
-          action: didTapRescheduleButton
-        )
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .frame(maxWidth: .infinity)
+        if appModel.purchaseManager.isPro {
+          Button("Start WBTB + MILD", systemImage: "moon.zzz") {
+            appModel.route = .wbtb
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.large)
+          .frame(maxWidth: .infinity)
+        }
 
         if let message = appModel.statusMessage {
           StatusMessageView(message: message, dismiss: appModel.dismissStatus)
@@ -81,16 +81,11 @@ struct HomeView: View {
       }
       .padding()
     }
+    .lucidScreenBackground()
     .navigationTitle("Lucid Cue")
   }
 
   private func didTapRealityCheckButton() {
     appModel.route = .realityCheck(source: .iPhoneManual)
-  }
-
-  private func didTapRescheduleButton() {
-    Task {
-      await appModel.rescheduleReminders()
-    }
   }
 }

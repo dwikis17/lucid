@@ -12,29 +12,33 @@ final class AppModel {
   private(set) var nextDaytimeReminder: Date?
   private(set) var nextNightCue: Date?
   private(set) var statusMessage: String?
-  private(set) var pendingIdentifiers: [String] = []
   var route: AppRoute?
-
-  let connectivity: IOSConnectivityService
+  let appLock: AppLockManager
+  let purchaseManager: PurchaseManager
 
   private let settingsRepository: SettingsRepository
   private let scheduler: any DaytimeNotificationScheduling
   private let authorizationService: any NotificationAuthorizing
   private let modelContext: ModelContext
   private let notificationDelegate: NotificationDelegate
+  private let connectivity: IOSConnectivityService
 
   init(
     modelContext: ModelContext,
     settingsRepository: SettingsRepository = SettingsRepository(),
     scheduler: any DaytimeNotificationScheduling = DaytimeNotificationScheduler(),
     authorizationService: any NotificationAuthorizing = NotificationAuthorizationService(),
-    connectivity: IOSConnectivityService = IOSConnectivityService()
+    connectivity: IOSConnectivityService = IOSConnectivityService(),
+    appLock: AppLockManager = AppLockManager(),
+    purchaseManager: PurchaseManager = PurchaseManager()
   ) {
     self.modelContext = modelContext
     self.settingsRepository = settingsRepository
     self.scheduler = scheduler
     self.authorizationService = authorizationService
     self.connectivity = connectivity
+    self.appLock = appLock
+    self.purchaseManager = purchaseManager
     settings = settingsRepository.settings
     notificationDelegate = NotificationDelegate()
 
@@ -46,18 +50,21 @@ final class AppModel {
   }
 
   func didLaunch() async {
-    authorizationStatus = await authorizationService.authorizationStatus()
-    await refreshScheduleState()
+    await purchaseManager.start()
+    await reconcileNotificationState()
+    sendLatestSettings()
+  }
+
+  func didBecomeActive() async {
+    await purchaseManager.refresh()
+    await reconcileNotificationState()
     sendLatestSettings()
   }
 
   func requestNotificationPermission() async {
     do {
       _ = try await authorizationService.requestAuthorization()
-      authorizationStatus = await authorizationService.authorizationStatus()
-      if isNotificationAuthorized {
-        await rescheduleReminders()
-      }
+      await reconcileNotificationState()
     } catch {
       statusMessage = error.localizedDescription
     }
@@ -73,7 +80,7 @@ final class AppModel {
     do {
       try settingsRepository.save(newSettings)
       settings = settingsRepository.settings
-      await rescheduleReminders()
+      await reconcileReminders()
       sendLatestSettings()
       return true
     } catch {
@@ -82,19 +89,28 @@ final class AppModel {
     }
   }
 
-  func rescheduleReminders() async {
+  private func reconcileReminders() async {
     guard isNotificationAuthorized else {
       statusMessage = "Enable notifications in Settings to schedule reality-check cues."
+      await refreshScheduleState()
       return
     }
 
     do {
-      try await scheduler.scheduleDaytimeNotifications(
-        settings: settings,
-        startingFrom: .now
-      )
+      if purchaseManager.isPro {
+        try await scheduler.reconcileDaytimeNotifications(settings: settings, startingFrom: .now)
+      } else {
+        await scheduler.cancelDaytimeNotifications()
+      }
+      try await scheduler.reconcileMorningJournalReminder(settings: settings)
+      if purchaseManager.isPro {
+        try await scheduler.reconcileWBTBNotifications(settings: settings)
+      } else {
+        var freeSettings = settings
+        freeSettings.isNightCueEnabled = false
+        try await scheduler.reconcileWBTBNotifications(settings: freeSettings)
+      }
       await refreshScheduleState()
-      statusMessage = "Seven days of reminders are scheduled."
     } catch {
       statusMessage = "Could not schedule reminders: \(error.localizedDescription)"
     }
@@ -115,17 +131,31 @@ final class AppModel {
     insertIfNeeded(event)
   }
 
-  func testWatchCue() {
-    do {
-      try connectivity.sendTestCue()
-      statusMessage = "Test cue sent to Apple Watch."
-    } catch {
-      statusMessage = error.localizedDescription
-    }
+  func beginDreamEntry() {
+    let dream = DreamEntry()
+    modelContext.insert(dream)
+    try? modelContext.save()
+    route = .dreamEntry(id: dream.id)
+  }
+
+  func dreamEntry(id: UUID) -> DreamEntry? {
+    let descriptor = FetchDescriptor<DreamEntry>(
+      predicate: #Predicate { $0.id == id }
+    )
+    return try? modelContext.fetch(descriptor).first
+  }
+
+  func recordWBTBSession() {
+    modelContext.insert(StoredWBTBSession(routineMinutes: settings.wbtbRoutineMinutes))
+    try? modelContext.save()
   }
 
   func dismissStatus() {
     statusMessage = nil
+  }
+
+  func setAppLockEnabled(_ enabled: Bool) {
+    appLock.setEnabled(enabled)
   }
 
   func openSystemNotificationSettings() {
@@ -135,27 +165,6 @@ final class AppModel {
     UIApplication.shared.open(url)
   }
 
-  #if DEBUG
-  func scheduleDebugDaytimeCue() async {
-    do {
-      try await scheduler.scheduleTest(cueWord: settings.cueWord, after: 10)
-      statusMessage = "A test notification is scheduled in 10 seconds."
-      await refreshPendingIdentifiers()
-    } catch {
-      statusMessage = error.localizedDescription
-    }
-  }
-
-  func clearPendingNotifications() async {
-    scheduler.clearAllPendingNotifications()
-    await refreshScheduleState()
-  }
-
-  func refreshPendingIdentifiers() async {
-    pendingIdentifiers = await scheduler.pendingIdentifiers()
-  }
-  #endif
-
   var isNotificationAuthorized: Bool {
     authorizationStatus == .authorized || authorizationStatus == .provisional
   }
@@ -163,6 +172,12 @@ final class AppModel {
   private func configureNotificationDelegate() {
     notificationDelegate.didOpenRealityCheck = { [weak self] source in
       self?.route = .realityCheck(source: source)
+    }
+    notificationDelegate.didOpenMorningJournal = { [weak self] in
+      self?.beginDreamEntry()
+    }
+    notificationDelegate.didOpenWBTB = { [weak self] in
+      self?.route = .wbtb
     }
     notificationDelegate.didChooseResult = { [weak self] result, cueWord in
       self?.record(result: result, source: .iPhoneNotification, cueWord: cueWord)
@@ -198,18 +213,37 @@ final class AppModel {
   }
 
   private func refreshScheduleState() async {
-    nextDaytimeReminder = await scheduler.nextScheduledDaytimeNotification()
-    nextNightCue = DateCalculator.nextNightCueDate(settings: settings, now: .now)
-    #if DEBUG
-    await refreshPendingIdentifiers()
-    #endif
+    nextDaytimeReminder = if settings.isEnabled && isNotificationAuthorized {
+      await scheduler.nextScheduledDaytimeNotification()
+    } else {
+      nil
+    }
+    nextNightCue = if purchaseManager.isPro,
+      settings.isNightCueEnabled,
+      settings.hasAcknowledgedWBTBSafety,
+      !settings.wbtbWeekdays.isEmpty
+    {
+      DateCalculator.nextNightCueDate(settings: settings, now: .now)
+    } else {
+      nil
+    }
+  }
+
+  private func reconcileNotificationState() async {
+    authorizationStatus = await authorizationService.authorizationStatus()
+    if isNotificationAuthorized {
+      await reconcileReminders()
+    } else {
+      await refreshScheduleState()
+    }
   }
 
   private func sendLatestSettings() {
-    do {
-      try connectivity.send(settings: settings)
-    } catch {
-      statusMessage = "Settings are saved and will sync when Apple Watch is available."
+    var watchSettings = settings
+    if !purchaseManager.isPro {
+      watchSettings.isNightCueEnabled = false
+      watchSettings.wbtbWeekdays = []
     }
+    try? connectivity.send(settings: watchSettings)
   }
 }

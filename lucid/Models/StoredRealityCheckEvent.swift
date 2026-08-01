@@ -3,11 +3,11 @@ import SwiftData
 
 @Model
 final class StoredRealityCheckEvent {
-  @Attribute(.unique) var id: UUID
-  var timestamp: Date
-  var sourceRawValue: String
-  var resultRawValue: String
-  var cueWord: String
+  var id: UUID = UUID()
+  var timestamp: Date = .now
+  var sourceRawValue: String = RealityCheckEvent.Source.iPhoneManual.rawValue
+  var resultRawValue: String = RealityCheckEvent.Result.skipped.rawValue
+  var cueWord: String = ""
 
   init(event: RealityCheckEvent) {
     id = event.id

@@ -37,7 +37,7 @@ struct RealityCheckView: View {
           }
 
           Button("I Checked", systemImage: "checkmark.circle", action: didTapCheckedButton)
-          .buttonStyle(.borderedProminent)
+          .lucidPrimaryButton()
           .controlSize(.large)
           .frame(maxWidth: .infinity)
 
@@ -48,6 +48,7 @@ struct RealityCheckView: View {
         }
         .padding()
       }
+      .lucidScreenBackground()
       .navigationTitle("Reality Check")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

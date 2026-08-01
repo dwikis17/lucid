@@ -8,16 +8,14 @@ final class WatchAppModel {
   private(set) var nextNightCue: Date?
   private(set) var statusMessage: String?
   private(set) var authorizationStatus = UNAuthorizationStatus.notDetermined
-  private(set) var pendingIdentifiers: [String] = []
   var isShowingRealityCheck = false
   var realityCheckSource = RealityCheckEvent.Source.watchManual
-
-  let connectivity: WatchConnectivityService
 
   private let repository: WatchSettingsRepository
   private let scheduler: any NightNotificationScheduling
   private let hapticService: WatchHapticService
   private let notificationDelegate: WatchNotificationDelegate
+  private let connectivity: WatchConnectivityService
 
   init(
     repository: WatchSettingsRepository = WatchSettingsRepository(),
@@ -57,10 +55,6 @@ final class WatchAppModel {
     isShowingRealityCheck = true
   }
 
-  func playSelectedHaptic() {
-    hapticService.play(settings.selectedHaptic)
-  }
-
   func record(
     result: RealityCheckEvent.Result,
     source: RealityCheckEvent.Source
@@ -83,34 +77,9 @@ final class WatchAppModel {
     }
   }
 
-  #if DEBUG
-  func scheduleDebugNightCue() async {
-    do {
-      try await scheduler.scheduleTest(settings: settings, after: 15)
-      statusMessage = "Test night cue scheduled in 15 seconds."
-      await refreshPendingIdentifiers()
-    } catch {
-      statusMessage = error.localizedDescription
-    }
-  }
-
-  func clearPendingNotifications() async {
-    scheduler.clearAllPendingNotifications()
-    nextNightCue = nil
-    await refreshPendingIdentifiers()
-  }
-
-  func refreshPendingIdentifiers() async {
-    pendingIdentifiers = await scheduler.pendingIdentifiers()
-  }
-  #endif
-
   private func configureConnectivity() {
     connectivity.receivedPayload = { [weak self] payload in
       self?.didReceive(payload)
-    }
-    connectivity.didReceiveTestCue = { [weak self] in
-      self?.playSelectedHaptic()
     }
   }
 
@@ -144,18 +113,7 @@ final class WatchAppModel {
   }
 
   private func scheduleNightCueIfAllowed() async {
-    guard authorizationStatus == .authorized || authorizationStatus == .provisional else {
-      nextNightCue = nil
-      return
-    }
-    do {
-      try await scheduler.scheduleNextNightCue(settings: settings, from: .now)
-      nextNightCue = await scheduler.nextScheduledNightCue()
-      #if DEBUG
-      await refreshPendingIdentifiers()
-      #endif
-    } catch {
-      statusMessage = "Could not schedule the nighttime cue."
-    }
+    scheduler.cancelNightCue()
+    nextNightCue = nil
   }
 }

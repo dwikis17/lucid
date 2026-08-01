@@ -52,8 +52,10 @@ struct HistoryView: View {
             }
           }
         }
+        .scrollContentBackground(.hidden)
       }
     }
+    .lucidScreenBackground()
     .navigationTitle("History")
   }
 }

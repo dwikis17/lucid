@@ -19,14 +19,7 @@ struct WatchHomeView: View {
           systemImage: "hand.raised",
           action: appModel.showManualRealityCheck
         )
-        .buttonStyle(.borderedProminent)
-
-        Button(
-          "Test Haptic",
-          systemImage: "waveform",
-          action: appModel.playSelectedHaptic
-        )
-        .buttonStyle(.bordered)
+        .lucidPrimaryButton()
 
         if let nextNightCue = appModel.nextNightCue {
           LabeledContent("Night cue") {
@@ -34,13 +27,9 @@ struct WatchHomeView: View {
           }
           .font(.footnote)
         } else {
-          Text("Night cue not scheduled")
+          Text("Night cues arrive from iPhone")
             .font(.footnote)
             .foregroundStyle(.secondary)
-        }
-
-        NavigationLink("Status") {
-          WatchSettingsStatusView()
         }
 
         if let statusMessage = appModel.statusMessage {
@@ -52,6 +41,7 @@ struct WatchHomeView: View {
       }
       .padding(.horizontal)
     }
+    .lucidScreenBackground()
     .navigationTitle("Lucid Cue")
   }
 }

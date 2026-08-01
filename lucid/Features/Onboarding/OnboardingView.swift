@@ -24,7 +24,7 @@ struct OnboardingView: View {
       id: 2,
       symbol: "applewatch.radiowaves.left.and.right",
       title: "A gentle nighttime cue",
-      detail: "Apple Watch schedules one local nighttime notification. Focus modes, device " +
+      detail: "Apple Watch schedules a local notification every night. Focus modes, device " +
         "settings, and the system control its timing and haptic."
     ),
   ]
@@ -46,11 +46,12 @@ struct OnboardingView: View {
 
       if selectedPage < pages.count {
         Button("Continue", systemImage: "arrow.right", action: didTapContinueButton)
-          .buttonStyle(.borderedProminent)
+          .lucidPrimaryButton()
           .controlSize(.large)
           .padding()
       }
     }
+    .lucidScreenBackground()
   }
 
   private func didTapContinueButton() {

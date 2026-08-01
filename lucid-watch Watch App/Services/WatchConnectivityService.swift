@@ -1,14 +1,9 @@
 import Foundation
-import Observation
 import WatchConnectivity
 
 @MainActor
-@Observable
 final class WatchConnectivityService: NSObject {
-  private(set) var activationState = WCSessionActivationState.notActivated
-  private(set) var isReachable = false
   var receivedPayload: ((ConnectivityPayload) -> Void)?
-  var didReceiveTestCue: (() -> Void)?
 
   private let session: WCSession?
 
@@ -20,7 +15,6 @@ final class WatchConnectivityService: NSObject {
   func activate() {
     session?.delegate = self
     session?.activate()
-    refreshState()
   }
 
   func send(event: RealityCheckEvent) throws {
@@ -29,10 +23,6 @@ final class WatchConnectivityService: NSObject {
     session.transferUserInfo(["event": data])
   }
 
-  private func refreshState() {
-    activationState = session?.activationState ?? .notActivated
-    isReachable = session?.isReachable ?? false
-  }
 }
 
 extension WatchConnectivityService: WCSessionDelegate {
@@ -41,15 +31,7 @@ extension WatchConnectivityService: WCSessionDelegate {
     activationDidCompleteWith activationState: WCSessionActivationState,
     error: (any Error)?
   ) {
-    Task { @MainActor in
-      refreshState()
-    }
-  }
-
-  nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
-    Task { @MainActor in
-      refreshState()
-    }
+    decodePayload(from: session.receivedApplicationContext)
   }
 
   nonisolated func session(
@@ -57,16 +39,6 @@ extension WatchConnectivityService: WCSessionDelegate {
     didReceiveApplicationContext applicationContext: [String: Any]
   ) {
     decodePayload(from: applicationContext)
-  }
-
-  nonisolated func session(
-    _ session: WCSession,
-    didReceiveMessage message: [String: Any]
-  ) {
-    guard message["command"] as? String == "playTestCue" else { return }
-    Task { @MainActor in
-      didReceiveTestCue?()
-    }
   }
 
   nonisolated private func decodePayload(from context: [String: Any]) {

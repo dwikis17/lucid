@@ -32,8 +32,31 @@ struct DateCalculatorTests {
     for date in first {
       let components = calendar.dateComponents([.hour, .minute], from: date)
       let minutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
-      #expect((9 * 60..<21 * 60).contains(minutes))
+      #expect((9 * 60...21 * 60).contains(minutes))
     }
+  }
+
+  @Test
+  func reminderDatesRepeatAcrossWeeks() throws {
+    let firstMonday = try #require(
+      calendar.date(from: DateComponents(year: 2026, month: 7, day: 27))
+    )
+    let laterMonday = try #require(calendar.date(byAdding: .day, value: 14, to: firstMonday))
+    let first = DateCalculator.generateReminderDates(
+      for: firstMonday,
+      settings: .defaultValue,
+      calendar: calendar
+    )
+    let later = DateCalculator.generateReminderDates(
+      for: laterMonday,
+      settings: .defaultValue,
+      calendar: calendar
+    )
+
+    #expect(
+      first.map { calendar.dateComponents([.hour, .minute], from: $0) } ==
+        later.map { calendar.dateComponents([.hour, .minute], from: $0) }
+    )
   }
 
   @Test
@@ -94,7 +117,7 @@ struct DateCalculatorTests {
   }
 
   @Test
-  func nightCueUsesCalendarAcrossDaylightSavingBoundary() throws {
+  func nightCueKeepsFixedLocalTimeAcrossDaylightSavingBoundary() throws {
     var settings = CueSettings.defaultValue
     settings.bedtimeMinutes = 23 * 60
     settings.nightCueDelayHours = 5
@@ -114,6 +137,6 @@ struct DateCalculatorTests {
 
     #expect(components.month == 11)
     #expect(components.day == 1)
-    #expect(components.hour == 3)
+    #expect(components.hour == 4)
   }
 }

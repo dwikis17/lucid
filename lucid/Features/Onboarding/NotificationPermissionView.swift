@@ -8,8 +8,8 @@ struct NotificationPermissionView: View {
   var body: some View {
     VStack(spacing: 24) {
       Image(systemName: "bell.circle")
-        .font(.largeTitle)
-        .foregroundStyle(.tint)
+        .symbolRenderingMode(.hierarchical)
+        .lucidHeroSymbol()
         .accessibilityHidden(true)
 
       Text("Allow gentle reminders")
@@ -29,7 +29,7 @@ struct NotificationPermissionView: View {
         systemImage: "bell.badge",
         action: didTapAllowButton
       )
-      .buttonStyle(.borderedProminent)
+      .lucidPrimaryButton()
       .controlSize(.large)
       .disabled(isRequesting)
 
@@ -38,6 +38,7 @@ struct NotificationPermissionView: View {
         .frame(minHeight: 44)
     }
     .padding()
+    .lucidScreenBackground()
   }
 
   private func didTapAllowButton() {

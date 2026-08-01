@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct MainTabView: View {
@@ -17,12 +18,20 @@ struct MainTabView: View {
       .tag(MainTab.home)
 
       NavigationStack {
-        HistoryView()
+        JournalView()
       }
       .tabItem {
-        Label("History", systemImage: "clock.arrow.circlepath")
+        Label("Journal", systemImage: "book.closed")
       }
-      .tag(MainTab.history)
+      .tag(MainTab.journal)
+
+      NavigationStack {
+        ProgressDashboardView()
+      }
+      .tabItem {
+        Label("Progress", systemImage: "chart.bar.xaxis")
+      }
+      .tag(MainTab.progress)
 
       NavigationStack {
         SettingsView()
@@ -32,11 +41,36 @@ struct MainTabView: View {
       }
       .tag(MainTab.settings)
     }
+    .toolbarBackground(LucidTheme.deepTwilight, for: .tabBar)
+    .toolbarBackground(.visible, for: .tabBar)
     .sheet(item: $appModel.route) { route in
       switch route {
       case let .realityCheck(source):
         RealityCheckView(source: source)
+      case let .dreamEntry(id):
+        if let dream = appModel.dreamEntry(id: id) {
+          NavigationStack {
+            DreamEditorView(dream: dream)
+          }
+        } else {
+          ContentUnavailableView("Dream unavailable", systemImage: "moon.zzz")
+        }
+      case .wbtb:
+        WBTBView()
       }
     }
   }
+}
+
+#Preview {
+  let container = try! ModelContainer(
+    for: StoredRealityCheckEvent.self, DreamEntry.self, StoredWBTBSession.self,
+    configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+  )
+  let appModel = AppModel(modelContext: container.mainContext)
+
+  return MainTabView()
+    .environment(appModel)
+    .modelContainer(container)
+    .preferredColorScheme(.dark)
 }

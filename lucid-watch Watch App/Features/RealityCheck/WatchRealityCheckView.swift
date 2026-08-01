@@ -18,12 +18,13 @@ struct WatchRealityCheckView: View {
         Label("Notice anything unusual", systemImage: "questionmark.circle")
 
         Button("I Checked", action: didTapCheckedButton)
-          .buttonStyle(.borderedProminent)
+          .lucidPrimaryButton()
 
         Button("Skip", action: didTapSkipButton)
           .buttonStyle(.bordered)
       }
     }
+    .lucidScreenBackground()
     .navigationTitle("Reality Check")
   }
 

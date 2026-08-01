@@ -6,16 +6,19 @@ struct SetupView: View {
   @State private var daytimeStart = Date.now
   @State private var daytimeEnd = Date.now
   @State private var bedtime = Date.now
+  @State private var morningReminder = Date.now
   @State private var isLoaded = false
   @State private var validationErrors: [String] = []
   @State private var isSaving = false
+  @State private var didSave = false
+  @State private var saveError: String?
 
   var body: some View {
     Form {
       Section("Cue") {
         TextField("Cue word", text: $draft.cueWord)
           .textInputAutocapitalization(.words)
-        Picker("Watch haptic preview", selection: $draft.selectedHaptic) {
+        Picker("Completion haptic", selection: $draft.selectedHaptic) {
           ForEach(CueHaptic.allCases) { haptic in
             Text(haptic.displayName).tag(haptic)
           }
@@ -32,21 +35,70 @@ struct SetupView: View {
         DatePicker("End", selection: $daytimeEnd, displayedComponents: .hourAndMinute)
       }
 
-      Section("Nighttime cue") {
-        Toggle("Nighttime cue", isOn: $draft.isNightCueEnabled)
-        DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
-        Picker("Delay after bedtime", selection: $draft.nightCueDelayHours) {
-          ForEach([4, 5, 6], id: \.self) { hours in
-            Text("\(hours) hours").tag(hours)
+      if appModel.purchaseManager.isPro {
+        Section("Nighttime cue") {
+          Toggle("WBTB + MILD", isOn: $draft.isNightCueEnabled)
+          DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
+          Picker("Delay after bedtime", selection: $draft.nightCueDelayHours) {
+            ForEach([4, 5, 6], id: \.self) { hours in
+              Text("\(hours) hours").tag(hours)
+            }
           }
+          .disabled(!draft.isNightCueEnabled)
+          Text(
+            "The iPhone schedules a gentle local cue. The system controls exact delivery and " +
+              "whether it appears on iPhone or Apple Watch."
+          )
+          .font(.footnote)
+          .foregroundStyle(.secondary)
         }
-        .disabled(!draft.isNightCueEnabled)
-        Text(
-          "The watch schedules one gentle notification. The system controls exact " +
-            "delivery and its notification haptic."
+
+        Section("WBTB nights") {
+          Toggle("I am 18 or older", isOn: $draft.hasAcknowledgedWBTBSafety)
+          ForEach(1...7, id: \.self) { weekday in
+            Button {
+              toggleWeekday(weekday)
+            } label: {
+              HStack {
+                Text(weekdayName(weekday))
+                Spacer()
+                if draft.wbtbWeekdays.contains(weekday) {
+                  Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.tint)
+                } else {
+                  Image(systemName: "circle")
+                    .foregroundStyle(.secondary)
+                }
+              }
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(draft.wbtbWeekdays.contains(weekday) ? "Selected" : "Not selected")
+          }
+          Picker("Guided routine", selection: $draft.wbtbRoutineMinutes) {
+            Text("5 minutes").tag(5)
+            Text("10 minutes").tag(10)
+          }
+          Text("Choose up to two nights. Skip WBTB when you need uninterrupted sleep.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        }
+      } else {
+        Section("WBTB + MILD") {
+          NavigationLink("Unlock Lucid Cue Pro", value: SettingsDestination.pro)
+          Text("Scheduled cues and the guided routine are included with Pro.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        }
+      }
+
+      Section("Morning journal") {
+        Toggle("Morning reminder", isOn: $draft.isMorningReminderEnabled)
+        DatePicker(
+          "Time",
+          selection: $morningReminder,
+          displayedComponents: .hourAndMinute
         )
-        .font(.footnote)
-        .foregroundStyle(.secondary)
+        .disabled(!draft.isMorningReminderEnabled)
       }
 
       Section("Delivery") {
@@ -63,12 +115,29 @@ struct SetupView: View {
         }
       }
 
+      if didSave {
+        Section {
+          Label("Settings saved.", systemImage: "checkmark.circle.fill")
+            .foregroundStyle(LucidTheme.moonmint)
+        }
+      } else if let saveError {
+        Section {
+          Label(saveError, systemImage: "exclamationmark.circle")
+            .foregroundStyle(.red)
+        }
+      }
+
       Section {
         Button("Save & Schedule", systemImage: "checkmark", action: didTapSaveButton)
           .disabled(isSaving)
       }
     }
+    .scrollContentBackground(.hidden)
+    .lucidScreenBackground()
     .onAppear(perform: loadSettings)
+    .sensoryFeedback(.success, trigger: didSave) { _, newValue in
+      newValue
+    }
   }
 
   private func loadSettings() {
@@ -77,20 +146,29 @@ struct SetupView: View {
     daytimeStart = date(for: draft.daytimeStartMinutes)
     daytimeEnd = date(for: draft.daytimeEndMinutes)
     bedtime = date(for: draft.bedtimeMinutes)
+    morningReminder = date(for: draft.morningReminderMinutes)
     isLoaded = true
   }
 
   private func didTapSaveButton() {
+    didSave = false
+    saveError = nil
     draft.daytimeStartMinutes = minutes(for: daytimeStart)
     draft.daytimeEndMinutes = minutes(for: daytimeEnd)
     draft.bedtimeMinutes = minutes(for: bedtime)
+    draft.morningReminderMinutes = minutes(for: morningReminder)
     validationErrors = CueSettingsValidator.errors(for: draft)
     guard validationErrors.isEmpty else { return }
 
     isSaving = true
     Task {
-      _ = await appModel.save(settings: draft)
+      let saved = await appModel.save(settings: draft)
       isSaving = false
+      if saved {
+        didSave = true
+      } else {
+        saveError = appModel.statusMessage ?? "Could not save settings."
+      }
     }
   }
 
@@ -105,5 +183,17 @@ struct SetupView: View {
   private func minutes(for date: Date) -> Int {
     let components = Calendar.current.dateComponents([.hour, .minute], from: date)
     return (components.hour ?? 0) * 60 + (components.minute ?? 0)
+  }
+
+  private func weekdayName(_ weekday: Int) -> String {
+    Calendar.current.shortWeekdaySymbols[weekday - 1]
+  }
+
+  private func toggleWeekday(_ weekday: Int) {
+    if draft.wbtbWeekdays.contains(weekday) {
+      draft.wbtbWeekdays.removeAll { $0 == weekday }
+    } else if draft.wbtbWeekdays.count < 2 {
+      draft.wbtbWeekdays.append(weekday)
+    }
   }
 }

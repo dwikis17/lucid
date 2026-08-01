@@ -8,6 +8,11 @@ struct CueSettings: Codable, Equatable, Sendable {
   var bedtimeMinutes: Int
   var nightCueDelayHours: Int
   var isNightCueEnabled: Bool
+  var wbtbWeekdays: [Int]
+  var wbtbRoutineMinutes: Int
+  var hasAcknowledgedWBTBSafety: Bool
+  var isMorningReminderEnabled: Bool
+  var morningReminderMinutes: Int
   var selectedHaptic: CueHaptic
   var isSoundEnabled: Bool
   var isEnabled: Bool
@@ -20,6 +25,11 @@ struct CueSettings: Codable, Equatable, Sendable {
     bedtimeMinutes: 23 * 60,
     nightCueDelayHours: 5,
     isNightCueEnabled: true,
+    wbtbWeekdays: [2, 5],
+    wbtbRoutineMinutes: 5,
+    hasAcknowledgedWBTBSafety: false,
+    isMorningReminderEnabled: true,
+    morningReminderMinutes: 8 * 60,
     selectedHaptic: .notification,
     isSoundEnabled: false,
     isEnabled: true

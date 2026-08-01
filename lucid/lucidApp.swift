@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import RevenueCat
 
 @main
 struct LucidCueApp: App {
@@ -7,20 +8,42 @@ struct LucidCueApp: App {
   @State private var appModel: AppModel
 
   init() {
-    do {
-      let container = try ModelContainer(for: StoredRealityCheckEvent.self)
-      modelContainer = container
-      _appModel = State(initialValue: AppModel(modelContext: container.mainContext))
-    } catch {
-      fatalError("Could not create the local history store: \(error.localizedDescription)")
-    }
+    RevenueCatConfiguration.configure()
+    let container = Self.makeModelContainer()
+    modelContainer = container
+    _appModel = State(initialValue: AppModel(modelContext: container.mainContext))
   }
 
   var body: some Scene {
     WindowGroup {
       ContentView()
         .environment(appModel)
+        .preferredColorScheme(.dark)
     }
     .modelContainer(modelContainer)
+  }
+
+  private static func makeModelContainer() -> ModelContainer {
+    let schema = Schema([
+      DreamEntry.self,
+      StoredRealityCheckEvent.self,
+      StoredWBTBSession.self,
+    ])
+    let cloudConfiguration = ModelConfiguration(
+      "Lucid",
+      schema: schema,
+      cloudKitDatabase: .private
+    )
+
+    do {
+      return try ModelContainer(for: schema, configurations: [cloudConfiguration])
+    } catch {
+      let localConfiguration = ModelConfiguration("Lucid", schema: schema)
+      do {
+        return try ModelContainer(for: schema, configurations: [localConfiguration])
+      } catch {
+        fatalError("Could not create the Lucid data store: \(error.localizedDescription)")
+      }
+    }
   }
 }

@@ -3,7 +3,9 @@ import Foundation
 enum NotificationIdentifiers {
   static let daytimePrefix = "lucidcue.daytime."
   static let nighttime = "lucidcue.nighttime"
-  static let test = "lucidcue.test"
+  static let wbtbPrefix = "lucidcue.wbtb."
+  static let morningJournal = "lucidcue.morning-journal"
+  static let snoozePrefix = "lucidcue.snooze."
   static let category = "REALITY_CHECK"
 }
 
