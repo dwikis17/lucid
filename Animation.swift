@@ -26,19 +26,24 @@ struct JournalTabBar<Tab: JournalTabItem>: View {
     var body: some View {
         GeometryReader {
             let containerSize = $0.size
+            let activeTitleWidth = tabTitleSizes[selection]?.width ?? 0
+            
+            let activeWidth = activeTitleWidth + 60 + 6
+            let inActiveWidth = (containerSize.width - activeWidth) / CGFloat(allTabs.count - 1)
             
             HStack(spacing: spacing) {
                 ForEach(allTabs, id: \.title) { tab in
-                    TabItemView(tab)
+                    TabItemView(tab, inActiveWidth: inActiveWidth)
                 }
             }
         }
         .frame(height: 38)
         .animation(animation, value: selection)
+     
     }
     
     @ViewBuilder
-    func TabItemView(_ tab: Tab) -> some View {
+    func TabItemView(_ tab: Tab, inActiveWidth: CGFloat) -> some View {
         let isActive = selection == tab
         HStack(spacing: isActive ? 6 : 0) {
             Image(systemName: tab.symbol)
@@ -61,6 +66,7 @@ struct JournalTabBar<Tab: JournalTabItem>: View {
         .foregroundStyle(isActive ? tab.activeTint : .gray)
         .padding(.horizontal, isActive ? 20 : 0)
         .frame(maxHeight: .infinity)
+        .frame(maxWidth: isActive ? nil : inActiveWidth)
         .background {
             ZStack {
                 Capsule()
@@ -93,6 +99,7 @@ struct JournalTabBar<Tab: JournalTabItem>: View {
 
 // sample tab item
 enum JournalTab: JournalTabItem {
+    case all
     case unaware
     case suspicious
     case brief
@@ -102,6 +109,7 @@ enum JournalTab: JournalTabItem {
 
     var symbol: String {
         switch self {
+        case .all: "square.grid.2x2"
         case .unaware: "moon"
         case .suspicious: "moon.haze"
         case .brief: "moon.stars"
@@ -113,6 +121,7 @@ enum JournalTab: JournalTabItem {
     
     var title: String {
         return switch self {
+        case .all: "All"
         case .brief: "Briefly"
         case .suspicious: "Suspicious"
         case .clear: "Clear"
@@ -132,7 +141,7 @@ enum JournalTab: JournalTabItem {
 }
 
 struct TestView: View {
-    @State private var activeTab: JournalTab = .clear
+    @State private var activeTab: JournalTab = .all
     var body: some View {
         NavigationStack {
             ScrollView(.vertical) {
