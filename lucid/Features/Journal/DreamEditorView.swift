@@ -3,9 +3,11 @@ import SwiftUI
 
 struct DreamEditorView: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.modelContext) private var modelContext
   @Bindable var dream: DreamEntry
   @State private var validationMessage: String?
+  @State private var isEditorVisible = false
 
   var body: some View {
     Form {
@@ -69,6 +71,20 @@ struct DreamEditorView: View {
     .onChange(of: dream.dreamDate) { _, _ in saveDraft() }
     .onChange(of: dream.lucidityRawValue) { _, _ in saveDraft() }
     .onDisappear { saveDraft() }
+    .scaleEffect(isEditorVisible ? 1 : 0.92)
+    .opacity(isEditorVisible ? 1 : 0)
+    .onAppear(perform: animatePresentation)
+  }
+
+  private func animatePresentation() {
+    guard !reduceMotion else {
+      isEditorVisible = true
+      return
+    }
+
+    withAnimation(.easeOut(duration: 0.35)) {
+      isEditorVisible = true
+    }
   }
 
   private func finish() {
