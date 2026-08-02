@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		64356817301F068D00B9F439 /* Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64356816301F068D00B9F439 /* Animation.swift */; };
+		64356818301F068D00B9F439 /* Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64356816301F068D00B9F439 /* Animation.swift */; };
 		937483C73019F59000AB02CA /* lucid-watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 937483A73019F58E00AB02CA /* lucid-watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E1A1C0010000000000000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = E1A1C1010000000000000001 /* RevenueCat */; };
 		E1A1C0010000000000000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = E1A1C1010000000000000002 /* RevenueCatUI */; };
@@ -65,6 +67,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		64356816301F068D00B9F439 /* Animation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Animation.swift; sourceTree = "<group>"; };
 		937483773019F3A600AB02CA /* lucid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = lucid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		937483863019F3A800AB02CA /* lucidTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lucidTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		937483903019F3A800AB02CA /* lucidUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lucidUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -175,6 +178,7 @@
 		9374836E3019F3A600AB02CA = {
 			isa = PBXGroup;
 			children = (
+				64356816301F068D00B9F439 /* Animation.swift */,
 				A11CE0000000000000000001 /* Shared */,
 				937483793019F3A600AB02CA /* lucid */,
 				937483893019F3A800AB02CA /* lucidTests */,
@@ -466,6 +470,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				64356818301F068D00B9F439 /* Animation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -487,6 +492,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				64356817301F068D00B9F439 /* Animation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

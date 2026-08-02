@@ -35,7 +35,7 @@ struct DreamEditorView: View {
               .tag(level.rawValue)
           }
         }
-        .pickerStyle(.navigationLink)
+        .pickerStyle(.menu)
 
         HStack {
           Image(systemName: dream.lucidity.symbol)
