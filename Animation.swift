@@ -45,45 +45,47 @@ struct JournalTabBar<Tab: JournalTabItem>: View {
     @ViewBuilder
     func TabItemView(_ tab: Tab, inActiveWidth: CGFloat) -> some View {
         let isActive = selection == tab
-        HStack(spacing: isActive ? 6 : 0) {
-            Image(systemName: tab.symbol)
-                .font(.body)
-                .frame(width: 20)
-            
-            Text(tab.title)
-                .font(.callout)
-                .fontWeight(.semibold)
-                .fixedSize(horizontal: true, vertical: false)
-                .onGeometryChange(for: CGSize.self) { geo in
-                    geo.size
-                } action: { newValue in
-                    tabTitleSizes[tab] = newValue
-                }
-                .frame(width: isActive ? nil : 0 , alignment: .leading)
-                .opacity(isActive ? 1 : 0)
-            
-        }
-        .foregroundStyle(isActive ? tab.activeTint : .gray)
-        .padding(.horizontal, isActive ? 20 : 0)
-        .frame(maxHeight: .infinity)
-        .frame(maxWidth: isActive ? nil : inActiveWidth)
-        .background {
-            ZStack {
-                Capsule()
-                    .fill(.fill)
-                    .opacity(isActive ? 0 : 1)
-                
-                Capsule()
-                    .fill(tab.activeBackground)
-                    .opacity(isActive ?  1 : 0)
-            }
-        }
-        .clipShape(.capsule)
-        .contentShape(.capsule)
-        .geometryGroup()
-        .onTapGesture {
+        Button {
             selection = tab
+        } label: {
+            HStack(spacing: isActive ? 6 : 0) {
+                Image(systemName: tab.symbol)
+                    .font(.body)
+                    .frame(width: 20)
+
+                Text(tab.title)
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .onGeometryChange(for: CGSize.self) { geo in
+                        geo.size
+                    } action: { newValue in
+                        tabTitleSizes[tab] = newValue
+                    }
+                    .frame(width: isActive ? nil : 0, alignment: .leading)
+                    .opacity(isActive ? 1 : 0)
+            }
+            .foregroundStyle(isActive ? tab.activeTint : .gray)
+            .padding(.horizontal, isActive ? 20 : 0)
+            .frame(maxHeight: .infinity)
+            .frame(maxWidth: isActive ? nil : inActiveWidth)
+            .background {
+                ZStack {
+                    Capsule()
+                        .fill(.fill)
+                        .opacity(isActive ? 0 : 1)
+
+                    Capsule()
+                        .fill(tab.activeBackground)
+                        .opacity(isActive ? 1 : 0)
+                }
+            }
+            .clipShape(.capsule)
+            .contentShape(.capsule)
+            .geometryGroup()
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tab.title)
     }
     
     var allTabs: [Tab.AllCases.Element] {
@@ -132,11 +134,27 @@ enum JournalTab: JournalTabItem {
     }
 
     var activeTint: Color {
-        LucidTheme.deepTwilight
+        switch self {
+        case .all: LucidTheme.deepTwilight
+        case .unaware: .gray
+        case .suspicious: .orange
+        case .brief: .teal
+        case .clear: .blue
+        case .sustained: .purple
+        case .throughout: .indigo
+        }
     }
 
     var activeBackground: Color {
-        LucidTheme.moonmint
+        switch self {
+        case .all: LucidTheme.moonlight
+        case .unaware: .gray.opacity(0.22)
+        case .suspicious: .orange.opacity(0.22)
+        case .brief: .teal.opacity(0.22)
+        case .clear: .blue.opacity(0.22)
+        case .sustained: .purple.opacity(0.22)
+        case .throughout: .indigo.opacity(0.22)
+        }
     }
 }
 

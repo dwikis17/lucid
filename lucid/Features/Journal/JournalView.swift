@@ -7,13 +7,18 @@ struct JournalView: View {
   @Query(sort: \DreamEntry.dreamDate, order: .reverse)
   private var entries: [DreamEntry]
   @State private var searchText = ""
+  @State private var selectedTab: JournalTab = .all
 
   private var visibleEntries: [DreamEntry] {
     let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !query.isEmpty else { return entries }
-    return entries.filter {
-      $0.title.localizedStandardContains(query) ||
-        $0.content.localizedStandardContains(query)
+    let selectedLucidity = selectedTab.lucidityLevel
+
+    return entries.filter { entry in
+      let matchesLevel = selectedLucidity.map { entry.lucidity == $0 } ?? true
+      let matchesSearch = query.isEmpty ||
+        entry.title.localizedStandardContains(query) ||
+        entry.content.localizedStandardContains(query)
+      return matchesLevel && matchesSearch
     }
   }
 
@@ -31,7 +36,20 @@ struct JournalView: View {
           .lucidPrimaryButton()
         }
       } else if visibleEntries.isEmpty {
-        ContentUnavailableView.search(text: searchText)
+        if selectedTab != .all && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+          ContentUnavailableView {
+            Label("No \(selectedTab.title) dreams", systemImage: selectedTab.symbol)
+          } description: {
+            Text("Try another lucidity level or record a new dream.")
+          } actions: {
+            Button("Show All", systemImage: "square.grid.2x2") {
+              selectedTab = .all
+            }
+            .lucidPrimaryButton()
+          }
+        } else {
+          ContentUnavailableView.search(text: searchText)
+        }
       } else {
         List {
           ForEach(visibleEntries) { entry in
@@ -44,6 +62,13 @@ struct JournalView: View {
           .onDelete(perform: deleteEntries)
         }
         .scrollContentBackground(.hidden)
+      }
+    }
+    .safeAreaInset(edge: .top, spacing: 0) {
+      if !entries.isEmpty {
+        JournalTabBar(selection: $selectedTab)
+          .padding(.horizontal)
+          .padding(.vertical, 8)
       }
     }
     .lucidScreenBackground()
@@ -64,6 +89,20 @@ struct JournalView: View {
       modelContext.delete(visibleEntries[index])
     }
     try? modelContext.save()
+  }
+}
+
+private extension JournalTab {
+  var lucidityLevel: LucidityLevel? {
+    switch self {
+    case .all: nil
+    case .unaware: .unaware
+    case .suspicious: .suspicious
+    case .brief: .brief
+    case .clear: .clear
+    case .sustained: .sustained
+    case .throughout: .throughout
+    }
   }
 }
 
