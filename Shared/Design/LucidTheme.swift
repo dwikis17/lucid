@@ -8,7 +8,7 @@ enum LucidTheme {
   static let coolMist = Color(red: 238 / 255, green: 241 / 255, blue: 247 / 255)
 
   static let background = LinearGradient(
-    colors: [deepTwilight, lucidIndigo.opacity(0.55), deepTwilight],
+    colors: [deepTwilight, lucidIndigo.opacity(0.22), deepTwilight],
     startPoint: .topLeading,
     endPoint: .bottomTrailing
   )
