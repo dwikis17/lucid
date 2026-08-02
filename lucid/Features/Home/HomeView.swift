@@ -3,17 +3,17 @@ import SwiftUI
 
 struct HomeView: View {
   @Environment(AppModel.self) private var appModel
-  @Query private var events: [StoredRealityCheckEvent]
+  @Query private var dreams: [DreamEntry]
 
-  private var todayCompletedCount: Int {
-    events.filter {
-      Calendar.current.isDateInToday($0.timestamp) && $0.result == .completed
-    }.count
+  private var insights: JournalInsights {
+    JournalInsights(entries: dreams)
   }
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
+        InsightsCard(insights: insights)
+
         VStack(alignment: .leading) {
           Text("Today’s cue")
             .font(.subheadline)
@@ -22,24 +22,6 @@ struct HomeView: View {
             .font(.largeTitle)
             .bold()
         }
-
-        DashboardMetricCard(
-          title: "Next daytime reminder",
-          value: appModel.nextDaytimeReminder?.formatted(date: .abbreviated, time: .shortened)
-            ?? "Not scheduled",
-          symbol: "sun.max"
-        )
-        DashboardMetricCard(
-          title: "Next WBTB cue",
-          value: appModel.nextNightCue?.formatted(date: .abbreviated, time: .shortened)
-            ?? "Disabled",
-          symbol: "moon.stars"
-        )
-        DashboardMetricCard(
-          title: "Reality checks today",
-          value: todayCompletedCount.formatted(),
-          symbol: "checkmark.circle"
-        )
 
         Button(
           "Perform Reality Check",
