@@ -43,11 +43,32 @@ struct MainTabView: View {
     }
     .toolbarBackground(LucidTheme.deepTwilight, for: .tabBar)
     .toolbarBackground(.visible, for: .tabBar)
-    .sheet(item: $appModel.route) { route in
+    .sheet(item: Binding(
+      get: {
+        guard let route = appModel.route else { return nil }
+        if case .dreamEntry = route { return nil }
+        return route
+      },
+      set: { appModel.route = $0 }
+    )) { route in
       switch route {
       case let .realityCheck(source):
         RealityCheckView(source: source)
-      case let .dreamEntry(id):
+      case .dreamEntry:
+        EmptyView()
+      case .wbtb:
+        WBTBView()
+      }
+    }
+    .fullScreenCover(item: Binding(
+      get: {
+        guard let route = appModel.route else { return nil }
+        if case .dreamEntry = route { return route }
+        return nil
+      },
+      set: { appModel.route = $0 }
+    )) { route in
+      if case let .dreamEntry(id) = route {
         if let dream = appModel.dreamEntry(id: id) {
           NavigationStack {
             DreamEditorView(dream: dream)
@@ -55,8 +76,6 @@ struct MainTabView: View {
         } else {
           ContentUnavailableView("Dream unavailable", systemImage: "moon.zzz")
         }
-      case .wbtb:
-        WBTBView()
       }
     }
   }
