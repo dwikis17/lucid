@@ -26,20 +26,26 @@ struct HomeView: View {
         HStack(spacing: 12) {
           Button(action: didTapRealityCheckButton) {
             Label("Reality Check", systemImage: "hand.raised")
+              .lineLimit(1)
+              .minimumScaleFactor(0.8)
               .frame(maxWidth: .infinity, maxHeight: .infinity)
           }
           .lucidPrimaryButton()
           .buttonBorderShape(.roundedRectangle(radius: 16))
           .controlSize(.large)
+          .accessibilityLabel("Perform Reality Check")
        
 
           Button(action: appModel.beginDreamEntry) {
             Label("Record Dream", systemImage: "square.and.pencil")
+              .lineLimit(1)
+              .minimumScaleFactor(0.8)
               .frame(maxWidth: .infinity, maxHeight: .infinity)
           }
           .buttonStyle(.bordered)
           .buttonBorderShape(.roundedRectangle(radius: 16))
           .controlSize(.large)
+          .accessibilityLabel("Record a Dream")
 
         }
 
