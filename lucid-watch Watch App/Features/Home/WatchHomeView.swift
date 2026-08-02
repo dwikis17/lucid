@@ -42,6 +42,6 @@ struct WatchHomeView: View {
       .padding(.horizontal)
     }
     .lucidScreenBackground()
-    .navigationTitle("Lucid Cue")
+    .navigationTitle("Home")
   }
 }

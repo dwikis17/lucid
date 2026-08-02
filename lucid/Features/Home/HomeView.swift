@@ -23,23 +23,25 @@ struct HomeView: View {
             .bold()
         }
 
-        Button(
-          "Perform Reality Check",
-          systemImage: "hand.raised",
-          action: didTapRealityCheckButton
-        )
-        .lucidPrimaryButton()
-        .controlSize(.large)
-        .frame(maxWidth: .infinity)
+        HStack(spacing: 12) {
+          Button(action: didTapRealityCheckButton) {
+            Label("Reality Check", systemImage: "hand.raised")
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+          }
+          .lucidPrimaryButton()
+          .buttonBorderShape(.roundedRectangle(radius: 16))
+          .controlSize(.large)
+       
 
-        Button(
-          "Record a Dream",
-          systemImage: "square.and.pencil",
-          action: appModel.beginDreamEntry
-        )
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .frame(maxWidth: .infinity)
+          Button(action: appModel.beginDreamEntry) {
+            Label("Record Dream", systemImage: "square.and.pencil")
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+          }
+          .buttonStyle(.bordered)
+          .buttonBorderShape(.roundedRectangle(radius: 16))
+          .controlSize(.large)
+
+        }
 
         if appModel.purchaseManager.isPro {
           Button("Start WBTB + MILD", systemImage: "moon.zzz") {
@@ -64,7 +66,8 @@ struct HomeView: View {
       .padding()
     }
     .lucidScreenBackground()
-    .navigationTitle("Lucid Cue")
+
+    .navigationTitle("Home")
   }
 
   private func didTapRealityCheckButton() {
