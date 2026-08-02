@@ -140,6 +140,7 @@ struct SetupView: View {
     }
     .scrollContentBackground(.hidden)
     .lucidScreenBackground()
+    .toolbar(.hidden, for: .tabBar)
     .onAppear(perform: loadSettings)
     .sensoryFeedback(.success, trigger: didSave) { _, newValue in
       newValue
