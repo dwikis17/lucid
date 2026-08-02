@@ -3,6 +3,7 @@ import SwiftUI
 
 struct JournalView: View {
   @Environment(AppModel.self) private var appModel
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.modelContext) private var modelContext
   @Query(sort: \DreamEntry.dreamDate, order: .reverse)
   private var entries: [DreamEntry]
@@ -23,7 +24,7 @@ struct JournalView: View {
   }
 
   var body: some View {
-    Group {
+    ZStack {
       if entries.isEmpty {
         ContentUnavailableView {
           Label("No dreams yet", systemImage: "moon.stars")
@@ -47,8 +48,10 @@ struct JournalView: View {
             }
             .lucidPrimaryButton()
           }
+          .transition(.opacity.combined(with: .scale(scale: 0.98)))
         } else {
           ContentUnavailableView.search(text: searchText)
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
       } else {
         List {
@@ -62,8 +65,13 @@ struct JournalView: View {
           .onDelete(perform: deleteEntries)
         }
         .scrollContentBackground(.hidden)
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
       }
     }
+    .animation(
+      reduceMotion ? nil : .easeInOut(duration: 0.25),
+      value: selectedTab
+    )
     .safeAreaInset(edge: .top, spacing: 0) {
       if !entries.isEmpty {
         JournalTabBar(selection: $selectedTab)

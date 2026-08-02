@@ -136,7 +136,7 @@ enum JournalTab: JournalTabItem {
     var activeTint: Color {
         switch self {
         case .all: LucidTheme.deepTwilight
-        case .unaware: .gray
+        case .unaware: .accent
         case .suspicious: .orange
         case .brief: .teal
         case .clear: .blue
@@ -148,7 +148,7 @@ enum JournalTab: JournalTabItem {
     var activeBackground: Color {
         switch self {
         case .all: LucidTheme.moonlight
-        case .unaware: .gray.opacity(0.22)
+        case .unaware: .accent.opacity(0.2)
         case .suspicious: .orange.opacity(0.22)
         case .brief: .teal.opacity(0.22)
         case .clear: .blue.opacity(0.22)
