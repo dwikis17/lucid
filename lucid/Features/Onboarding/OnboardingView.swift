@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct OnboardingView: View {
@@ -60,3 +61,17 @@ struct OnboardingView: View {
     }
   }
 }
+
+#Preview {
+  let container = try! ModelContainer(
+    for: StoredRealityCheckEvent.self, DreamEntry.self, StoredWBTBSession.self,
+    configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+  )
+  let appModel = AppModel(modelContext: container.mainContext)
+
+  return OnboardingView(hasCompletedOnboarding: .constant(false))
+    .environment(appModel)
+    .modelContainer(container)
+    .preferredColorScheme(.dark)
+}
+

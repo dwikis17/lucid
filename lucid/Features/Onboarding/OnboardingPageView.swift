@@ -23,3 +23,18 @@ struct OnboardingPageView: View {
     .padding()
   }
 }
+
+#Preview {
+  OnboardingPageView(
+    page: OnboardingPage(
+      id: 0,
+      symbol: "hand.raised.fingers.spread",
+      title: "Build awareness",
+      detail: "Reality checks create a small daytime habit: pause, inspect what is around " +
+        "you, and ask whether you are dreaming."
+    )
+  )
+  .lucidScreenBackground()
+  .preferredColorScheme(.dark)
+}
+

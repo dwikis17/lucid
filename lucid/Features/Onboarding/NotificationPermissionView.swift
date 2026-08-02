@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct NotificationPermissionView: View {
@@ -38,7 +39,7 @@ struct NotificationPermissionView: View {
         .frame(minHeight: 44)
     }
     .padding()
-    .lucidScreenBackground()
+   
   }
 
   private func didTapAllowButton() {
@@ -54,3 +55,17 @@ struct NotificationPermissionView: View {
     hasCompletedOnboarding = true
   }
 }
+
+#Preview {
+  let container = try! ModelContainer(
+    for: StoredRealityCheckEvent.self, DreamEntry.self, StoredWBTBSession.self,
+    configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+  )
+  let appModel = AppModel(modelContext: container.mainContext)
+
+  return NotificationPermissionView(hasCompletedOnboarding: .constant(false))
+    .environment(appModel)
+    .modelContainer(container)
+    .preferredColorScheme(.dark)
+}
+
